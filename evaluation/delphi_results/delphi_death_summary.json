@@ -1,0 +1,25 @@
+{
+  "method": "delphi",
+  "n_patients": 26769,
+  "death_token_ids": [
+    1006,
+    1053,
+    1269
+  ],
+  "results": [
+    {
+      "token": 1269,
+      "auc": 0.9618589282035828,
+      "auc_variance_delong": 5.748618632717571e-06,
+      "n_samples": 16.0,
+      "n_diseased": 5976.0,
+      "n_healthy": 97023.0,
+      "index": 1269,
+      "name": "Death",
+      "count": 24152.0,
+      "ICD-10 Chapter": "Death",
+      "ICD-10 Chapter (short)": "Death",
+      "color": "#000a35"
+    }
+  ]
+}

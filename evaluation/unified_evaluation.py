@@ -47,14 +47,30 @@ EMBEDDING_RESULTS = EVALUATION_DIR / "embedding_results"
 # ---------------------------------------------------------------------------
 
 def load_delphi_results() -> Optional[Dict]:
-    """Load Delphi Death-token AUC results."""
-    summary_path = DELPHI_RESULTS / "delphi_death_summary.json"
-    if not summary_path.exists():
-        print(f"  [Delphi] Results not found at {summary_path}")
-        print(f"  [Delphi] Run: python evaluation/evaluate_delphi.py")
-        return None
-    with open(summary_path) as f:
-        return json.load(f)
+    """Load Delphi survival-aligned results (prefer test split)."""
+    for split in ["test", "val", "train"]:
+        results_path = DELPHI_RESULTS / f"delphi_{split}_results.json"
+        if results_path.exists():
+            with open(results_path) as f:
+                data = json.load(f)
+                data.setdefault("active_split", split)
+                return data
+
+    # Backwards compatibility: legacy summary
+    legacy_path = DELPHI_RESULTS / "delphi_death_summary.json"
+    if legacy_path.exists():
+        with open(legacy_path) as f:
+            legacy = json.load(f)
+        print("  [Delphi] Legacy summary detected; only DeLong AUC available.")
+        return {
+            "method": "delphi_legacy",
+            "legacy_delong": legacy,
+            "splits": {},
+            "horizons": [],
+        }
+
+    print("  [Delphi] Results not found. Run evaluation/evaluate_delphi.py")
+    return None
 
 
 def load_benchmarking_results() -> Optional[Dict]:
@@ -84,87 +100,110 @@ def load_embedding_results(method_name: str) -> Optional[Dict]:
 # Build comparison table
 # ---------------------------------------------------------------------------
 
-def build_comparison_table() -> pd.DataFrame:
-    """
-    Assemble a comparison DataFrame from all four methods.
+def extract_split_metrics(results: Dict, split: str) -> Dict:
+    splits = results.get("splits") or {}
+    return splits.get(split, {})
 
-    Columns: method, test_c_index, test_mean_td_auc, val_c_index, val_mean_td_auc,
-             auc_delong (Delphi only), notes
+
+def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFrame:
+    """
+    Assemble a comparison DataFrame from all methods using the new schema.
+    Columns: method, test_c_index, test_mean_td_auc, test_ibs, val_c_index, val_mean_td_auc, notes
     """
     rows: List[Dict] = []
 
-    # --- Method 1: Delphi ---
-    delphi = load_delphi_results()
+    # Delphi
+    delphi = all_results.get("delphi")
     if delphi:
-        delphi_row = {"method": "Delphi", "notes": ""}
-        results_list = delphi.get("results", [])
-        if results_list:
-            # Aggregate across Death tokens if multiple
+        if "splits" in delphi and delphi["splits"]:
+            active_split = delphi.get("active_split", "test")
+            metrics_split = extract_split_metrics(delphi, active_split)
+            row = {
+                "method": f"Delphi ({active_split})",
+                "test_c_index": metrics_split.get("c_index"),
+                "test_mean_td_auc": metrics_split.get("mean_td_auc"),
+                "test_ibs": metrics_split.get("ibs"),
+                "val_c_index": None,
+                "val_mean_td_auc": None,
+                "notes": f"Coverage: {delphi.get('coverage')}",
+                "test_auc_delong": None,
+                "test_auc_ci": None,
+            }
+        else:
+            legacy = delphi.get("legacy_delong", {})
+            results_list = legacy.get("results", [])
             aucs = [r.get("auc", float("nan")) for r in results_list]
             vars_ = [r.get("auc_variance_delong", float("nan")) for r in results_list]
-            mean_auc = float(np.nanmean(aucs))
-            # For DeLong: variance of mean = sum(var) / n^2
+            mean_auc = float(np.nanmean(aucs)) if aucs else None
             n = len([v for v in vars_ if not np.isnan(v)])
             mean_var = float(np.nansum(vars_) / max(n, 1) ** 2) if n > 0 else float("nan")
-            ci_lo = mean_auc - 1.96 * np.sqrt(mean_var)
-            ci_hi = mean_auc + 1.96 * np.sqrt(mean_var)
-            delphi_row["test_auc_delong"] = mean_auc
-            delphi_row["test_auc_ci"] = f"[{ci_lo:.4f}, {ci_hi:.4f}]"
-            # Delphi doesn't produce C-index or TD-AUC in the same way
-            delphi_row["test_c_index"] = None
-            delphi_row["test_mean_td_auc"] = None
-            delphi_row["val_c_index"] = None
-            delphi_row["val_mean_td_auc"] = None
-            delphi_row["notes"] = f"Death token AUC via DeLong; n_patients={delphi.get('n_patients', '?')}"
-        rows.append(delphi_row)
+            ci_lo = mean_auc - 1.96 * np.sqrt(mean_var) if mean_auc is not None else None
+            ci_hi = mean_auc + 1.96 * np.sqrt(mean_var) if mean_auc is not None else None
+            row = {
+                "method": "Delphi (legacy)",
+                "test_c_index": None,
+                "test_mean_td_auc": None,
+                "test_ibs": None,
+                "val_c_index": None,
+                "val_mean_td_auc": None,
+                "notes": "Legacy DeLong summary only",
+                "test_auc_delong": mean_auc,
+                "test_auc_ci": f"[{ci_lo:.4f}, {ci_hi:.4f}]" if ci_lo is not None else None,
+            }
+        rows.append(row)
 
-    # --- Method 2: Benchmarking ---
-    bench = load_benchmarking_results()
+    # Benchmarking
+    bench = all_results.get("benchmarking")
     if bench:
-        bench_row = {
+        bench_test = extract_split_metrics(bench, "test")
+        bench_val = extract_split_metrics(bench, "val")
+        rows.append({
             "method": "Benchmarking (CoxPH)",
-            "test_c_index": bench.get("test_c_index"),
-            "test_mean_td_auc": bench.get("test_mean_td_auc"),
-            "val_c_index": bench.get("val_c_index"),
-            "val_mean_td_auc": bench.get("val_mean_td_auc"),
+            "test_c_index": bench_test.get("c_index"),
+            "test_mean_td_auc": bench_test.get("mean_td_auc"),
+            "test_ibs": bench_test.get("ibs"),
+            "val_c_index": bench_val.get("c_index"),
+            "val_mean_td_auc": bench_val.get("mean_td_auc"),
+            "notes": str(bench.get("metadata")),
             "test_auc_delong": None,
             "test_auc_ci": None,
-            "notes": bench.get("method", ""),
-        }
-        rows.append(bench_row)
+        })
 
-    # --- Method 3: Text embedding ---
-    text_emb = load_embedding_results("text_embedding")
-    if text_emb:
-        text_row = {
+    # Text embeddings
+    text = all_results.get("text_embedding")
+    if text:
+        text_test = extract_split_metrics(text, "test")
+        text_val = extract_split_metrics(text, "val")
+        rows.append({
             "method": "Text Embedding + CoxPH",
-            "test_c_index": text_emb.get("test_c_index"),
-            "test_mean_td_auc": text_emb.get("test_mean_td_auc"),
-            "val_c_index": text_emb.get("val_c_index"),
-            "val_mean_td_auc": text_emb.get("val_mean_td_auc"),
+            "test_c_index": text_test.get("c_index"),
+            "test_mean_td_auc": text_test.get("mean_td_auc"),
+            "test_ibs": text_test.get("ibs"),
+            "val_c_index": text_val.get("c_index"),
+            "val_mean_td_auc": text_val.get("mean_td_auc"),
+            "notes": str(text.get("metadata")),
             "test_auc_delong": None,
             "test_auc_ci": None,
-            "notes": text_emb.get("method", ""),
-        }
-        rows.append(text_row)
+        })
 
-    # --- Method 4: Trajectory embedding ---
-    traj_emb = load_embedding_results("trajectory_embedding")
-    if traj_emb:
-        traj_row = {
+    # Trajectory embeddings
+    traj = all_results.get("trajectory_embedding")
+    if traj:
+        traj_test = extract_split_metrics(traj, "test")
+        traj_val = extract_split_metrics(traj, "val")
+        rows.append({
             "method": "Trajectory Embedding + CoxPH",
-            "test_c_index": traj_emb.get("test_c_index"),
-            "test_mean_td_auc": traj_emb.get("test_mean_td_auc"),
-            "val_c_index": traj_emb.get("val_c_index"),
-            "val_mean_td_auc": traj_emb.get("val_mean_td_auc"),
+            "test_c_index": traj_test.get("c_index"),
+            "test_mean_td_auc": traj_test.get("mean_td_auc"),
+            "test_ibs": traj_test.get("ibs"),
+            "val_c_index": traj_val.get("c_index"),
+            "val_mean_td_auc": traj_val.get("mean_td_auc"),
+            "notes": str(traj.get("metadata")),
             "test_auc_delong": None,
             "test_auc_ci": None,
-            "notes": traj_emb.get("method", ""),
-        }
-        rows.append(traj_row)
+        })
 
-    df = pd.DataFrame(rows)
-    return df
+    return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +231,10 @@ def print_comparison_table(df: pd.DataFrame):
         return
 
     # Header
-    header = f"{'Method':<35} {'Test C-idx':>10} {'Test TD-AUC':>11} {'Test DeLong':>11} {'Val C-idx':>10} {'Val TD-AUC':>11}"
+    header = (
+        f"{'Method':<35} {'Test C-idx':>10} {'Test TD-AUC':>11} {'Test IBS':>10} "
+        f"{'Test DeLong':>11} {'Val C-idx':>10} {'Val TD-AUC':>11}"
+    )
     print(f"\n{header}")
     print("-" * len(header))
 
@@ -201,6 +243,7 @@ def print_comparison_table(df: pd.DataFrame):
             f"{row['method']:<35} "
             f"{format_value(row.get('test_c_index')):>10} "
             f"{format_value(row.get('test_mean_td_auc')):>11} "
+            f"{format_value(row.get('test_ibs')):>10} "
             f"{format_value(row.get('test_auc_delong')):>11} "
             f"{format_value(row.get('val_c_index')):>10} "
             f"{format_value(row.get('val_mean_td_auc')):>11}"
@@ -224,25 +267,27 @@ def print_comparison_table(df: pd.DataFrame):
 # Detailed per-horizon table
 # ---------------------------------------------------------------------------
 
-def print_horizon_details():
+def print_horizon_details(all_results: Dict[str, Optional[Dict]]):
     """Print time-dependent AUC at each horizon for methods that support it."""
     print("\n" + "=" * 70)
     print("TIME-DEPENDENT AUC BY HORIZON (test set)")
     print("=" * 70)
 
-    methods = {
-        "Benchmarking": load_benchmarking_results(),
-        "Text Embedding": load_embedding_results("text_embedding"),
-        "Trajectory Embedding": load_embedding_results("trajectory_embedding"),
-    }
-
-    for name, results in methods.items():
-        if results is None:
+    for label, key in [
+        ("Delphi", "delphi"),
+        ("Benchmarking", "benchmarking"),
+        ("Text Embedding", "text_embedding"),
+        ("Trajectory Embedding", "trajectory_embedding"),
+    ]:
+        results = all_results.get(key)
+        if not results:
             continue
-        td_auc = results.get("test_td_auc")
-        if td_auc is None:
+        split = "test" if key != "delphi" else results.get("active_split", "test")
+        metrics_split = extract_split_metrics(results, split)
+        td_auc = metrics_split.get("td_auc")
+        if not td_auc:
             continue
-        print(f"\n  {name}:")
+        print(f"\n  {label} ({split}):")
         for horizon, auc_val in sorted(td_auc.items(), key=lambda x: float(x[0])):
             days = float(horizon)
             years = days / 365.25
@@ -268,9 +313,16 @@ def run_unified_evaluation() -> pd.DataFrame:
         print(f"  Warning: Cohort split not found at {COHORT_SPLIT}")
 
     print("\nLoading method results...")
-    df = build_comparison_table()
+    all_results = {
+        "delphi": load_delphi_results(),
+        "benchmarking": load_benchmarking_results(),
+        "text_embedding": load_embedding_results("text_embedding"),
+        "trajectory_embedding": load_embedding_results("trajectory_embedding"),
+    }
+
+    df = build_comparison_table(all_results)
     print_comparison_table(df)
-    print_horizon_details()
+    print_horizon_details(all_results)
 
     # Save table
     output_path = EVALUATION_DIR / "unified_comparison.csv"
