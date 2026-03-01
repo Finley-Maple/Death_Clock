@@ -64,13 +64,21 @@ def _patch_broken_torchvision():
         stub = types.ModuleType("torchvision")
         stub.__version__ = "0.0.0"
         stub.__path__ = []
+        # Some code (e.g. transformers/sentence-transformers) checks __spec__; avoid "torchvision.__spec__ is None"
+        try:
+            stub.__spec__ = importlib.machinery.ModuleSpec("torchvision", None, origin="stub")
+        except Exception:
+            stub.__spec__ = types.SimpleNamespace(origin="stub")
         sys.modules["torchvision"] = stub
 
         transforms_stub = types.ModuleType("torchvision.transforms")
-        # InterpolationMode is the only thing image_utils.py needs
         transforms_stub.InterpolationMode = type("InterpolationMode", (), {
             "BILINEAR": 2, "BICUBIC": 3, "NEAREST": 0, "LANCZOS": 1,
         })
+        try:
+            transforms_stub.__spec__ = importlib.machinery.ModuleSpec("torchvision.transforms", None, origin="stub")
+        except Exception:
+            transforms_stub.__spec__ = types.SimpleNamespace(origin="stub")
         sys.modules["torchvision.transforms"] = transforms_stub
 
 _patch_broken_torchvision()
@@ -192,27 +200,52 @@ class QwenEmbeddingExtractor:
         self.config = config or EmbeddingConfig()
         self.model = None
         self.tokenizer = None
+        self._st_model = None  # sentence-transformers fallback
         self._load_model()
 
     def _load_model(self):
-        """Load the Qwen3-Embedding model."""
+        """Load the Qwen3-Embedding model (transformers, with sentence-transformers fallback)."""
         # Validate versions before attempting to load
         _check_versions()
 
+        logger.info(f"Loading {self.config.model_name} on {self.config.device}...")
+
+        # Try transformers (AutoModel) first; fall back to sentence-transformers on config error
+        try:
+            self._load_model_transformers(force_download=False)
+        except OSError as e:
+            err_msg = str(e).lower()
+            if "can't load" in err_msg and "config" in err_msg:
+                logger.warning(
+                    "Transformers failed to load config (often due to cache or local path). "
+                    "Retrying once with force_download=True..."
+                )
+                try:
+                    self._load_model_transformers(force_download=True)
+                except OSError:
+                    logger.warning("Retry failed. Trying sentence-transformers fallback...")
+                    self._load_model_sentence_transformers()
+            else:
+                raise
+        if self._st_model is None and self.model is None:
+            raise RuntimeError("Failed to load embedding model.")
+
+    def _load_model_transformers(self, force_download: bool = False):
+        """Load using transformers AutoModel/AutoTokenizer."""
         from transformers import AutoModel, AutoTokenizer
 
-        logger.info(f"Loading {self.config.model_name} on {self.config.device}...")
+        load_kw = {"trust_remote_code": True}
+        if force_download:
+            load_kw["force_download"] = True
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.config.model_name,
             padding_side="left",
-            trust_remote_code=True,
+            **load_kw,
         )
 
-        model_kwargs = {"trust_remote_code": True}
+        model_kwargs = {"trust_remote_code": True, **load_kw}
 
-        # Use float16 on GPU, float32 on CPU
-        # NOTE: newer transformers deprecates "torch_dtype" in favor of "dtype"
         dtype_key = "dtype"
         if self.config.device == "cuda":
             model_kwargs[dtype_key] = torch.float16
@@ -236,7 +269,27 @@ class QwenEmbeddingExtractor:
             self.model = self.model.to(self.config.device)
 
         native_dim = MODEL_DEFAULT_DIM.get(self.config.model_name, "unknown")
-        logger.info(f"Model loaded! Native embedding dim: {native_dim}")
+        logger.info(f"Model loaded (transformers)! Native embedding dim: {native_dim}")
+
+    def _load_model_sentence_transformers(self):
+        """Load using sentence-transformers (recommended by model card when transformers fails)."""
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            raise ImportError(
+                "Transformers failed to load the model and sentence-transformers is not installed. "
+                "Install it for fallback: pip install sentence-transformers"
+            ) from None
+
+        logger.info("Loading with sentence-transformers...")
+        self._st_model = SentenceTransformer(
+            self.config.model_name,
+            device=self.config.device,
+            trust_remote_code=True,
+        )
+        # SentenceTransformer.encode returns normalized vectors by default for many models
+        native_dim = MODEL_DEFAULT_DIM.get(self.config.model_name, 1024)
+        logger.info(f"Model loaded (sentence-transformers)! Embedding dim: {native_dim}")
 
     def _get_target_dim(self) -> Optional[int]:
         """Return the target embedding dimension, or None for full native dim."""
@@ -250,6 +303,9 @@ class QwenEmbeddingExtractor:
 
     def extract_batch_embeddings(self, texts: List[str]) -> np.ndarray:
         """Extract embeddings for a batch of texts."""
+        if self._st_model is not None:
+            return self._extract_batch_sentence_transformers(texts)
+
         # Prepend instruction if set
         if self.config.instruction:
             texts = [
@@ -282,6 +338,26 @@ class QwenEmbeddingExtractor:
                 embeddings = F.normalize(embeddings, p=2, dim=1)
 
             return embeddings.cpu().float().numpy()
+
+    def _extract_batch_sentence_transformers(self, texts: List[str]) -> np.ndarray:
+        """Extract embeddings using sentence-transformers (fallback path)."""
+        if self.config.instruction:
+            texts = [
+                f"Instruct: {self.config.instruction}\nQuery: {t}"
+                for t in texts
+            ]
+        # encode(..., normalize_embeddings=True) matches our normalize behavior
+        embs = self._st_model.encode(
+            texts,
+            normalize_embeddings=self.config.normalize,
+            show_progress_bar=False,
+        )
+        if not isinstance(embs, np.ndarray):
+            embs = np.asarray(embs)
+        target_dim = self._get_target_dim()
+        if target_dim is not None and embs.shape[1] > target_dim:
+            embs = embs[:, :target_dim]
+        return embs.astype(np.float32)
 
 
 # ---------------------------------------------------------------------------

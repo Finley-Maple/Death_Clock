@@ -81,6 +81,8 @@ Options:
 
 The script logs everything to `pipeline_YYYYMMDD_HHMMSS.log` and prints the comparison table at the end.
 
+**Embedding model load error:** If you see `Can't load the configuration of 'Qwen/Qwen3-Embedding-0.6B'`, the code will retry with a fresh download and then fall back to `sentence-transformers` if needed. Install the fallback with: `pip install sentence-transformers`. Ensure no local folder named `Qwen` exists in the current working directory, and that you have network access to Hugging Face.
+
 ## Pipeline (step by step)
 
 ### Step 0: UKB data extraction
