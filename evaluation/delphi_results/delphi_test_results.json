@@ -1,0 +1,36 @@
+{
+  "method": "delphi",
+  "split": "test",
+  "risk_strategy": "max_logit_per_patient",
+  "horizons": [
+    3471,
+    5601,
+    7213
+  ],
+  "splits": {
+    "test": {
+      "c_index": 0.5882362312606542,
+      "td_auc": {
+        "3471": 0.46344578620745436,
+        "5601": 0.5661301630500634,
+        "7213": 0.5364167109024688
+      },
+      "mean_td_auc": 0.5317876076606936,
+      "ibs": null,
+      "size": 1500,
+      "event_rate": 0.25733333333333336
+    }
+  },
+  "coverage": {
+    "expected": 1500,
+    "available": 1500,
+    "coverage": 1.0,
+    "missing_count": 0,
+    "missing_examples": [],
+    "missing_predictions": []
+  },
+  "death_token_ids": [
+    1269
+  ],
+  "delong_summary": []
+}
