@@ -4,8 +4,11 @@
 data/ukb_*.csv
 data/batch_files/
 data/preprocessed/
+*.parquet
 *.bin
 *.pt
+field.tsv
+field.xlsx
 
 # ==========================
 # Python
@@ -72,3 +75,26 @@ data/preprocessed/
 # Cursor / IDE
 # ==========================
 .cursor/
+
+# ==========================
+# Logs
+# ==========================
+logs/
+*.log
+
+# ==========================
+# Quarto outputs
+# ==========================
+README_files/
+README.html
+
+# ==========================
+# Misc
+# ==========================
+.pytest_cache/
+.vscode/
+
+# ==========================
+# Documentation
+# ==========================
+docs/

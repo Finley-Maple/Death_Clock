@@ -182,23 +182,36 @@ Each evaluation script trains on the shared train split and evaluates on val/tes
 
 ```bash
 # Method 1: Delphi (requires step 4 Delphi binary data)
-python evaluation/evaluate_delphi.py --split test
+python evaluation/evaluate_delphi.py \
+    --split test \
+    --save-preds \
+    --horizons-days 365 1825
 
 # Method 2: Benchmarking (CoxPH on binary disease features)
-python evaluation/evaluate_benchmarking.py
+python evaluation/evaluate_benchmarking.py \
+    --baseline-mode all
 
 # Method 3: Text Embedding + CoxPH
 python evaluation/evaluate_embedding_survival.py \
     --embedding-dir data/preprocessed/embeddings_text \
     --tag patient \
-    --method-name text_embedding
+    --method-name text_embedding \
+    --baseline-mode all
 
 # Method 4: Trajectory Embedding + CoxPH
 python evaluation/evaluate_embedding_survival.py \
     --embedding-dir data/preprocessed/embeddings_traj \
     --tag trajectory \
-    --method-name trajectory_embedding
+    --method-name trajectory_embedding \
+    --baseline-mode none
 ```
+
+Each evaluator now shares the same CLI options:
+
+- `--baseline-mode {all, none, custom}` (and `--baseline-cols ...`) to control which survival covariates are concatenated with embeddings.
+- `--survival-csv` / `--cohort-json` to point at alternative datasets or splits.
+- `--save-preds` to dump per-split risk scores in `evaluation/*/predictions/`.
+- Delphi adds `--horizons-days` to override the default quantile-based horizons and aligns its risk outputs with the shared survival metrics.
 
 ### Step 7: Unified comparison
 
@@ -225,7 +238,7 @@ Key dependencies and what uses them:
 
 | Package | Version | Used by |
 |---------|---------|---------|
-| `torch` | >=2.3.0 | Delphi, Qwen3-Embedding |
+| `torch` | >=2.4.0 | Delphi, Qwen3-Embedding |
 | `transformers` | >=4.51.0 | Qwen3-Embedding (methods 3 & 4) |
 | `lifelines` | >=0.27.0 | CoxPH models (methods 2, 3, 4) |
 | `scikit-survival` | >=0.22.0 | Time-dependent AUC evaluation |

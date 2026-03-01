@@ -1,0 +1,15 @@
+{
+  "total_records": 2292844,
+  "total_patients": 133804,
+  "train_records": 147297,
+  "train_patients": 7000,
+  "val_records": 31275,
+  "val_patients": 1500,
+  "test_records": 31820,
+  "test_patients": 1500,
+  "disease_columns_mapped": 998,
+  "disease_columns_unmapped": 2,
+  "demographic_records": 39818,
+  "death_records": 34951,
+  "labels_used": 1010
+}

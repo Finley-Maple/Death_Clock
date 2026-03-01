@@ -10,9 +10,11 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 os.environ.setdefault("PANDAS_NO_IMPORT_NUMEXPR", "1")
@@ -24,6 +26,27 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SURVIVAL_DATASET = PROJECT_ROOT / "benchmarking" / "autoprognosis_survival_dataset.csv"
 OUTPUT_PATH = PROJECT_ROOT / "evaluation" / "cohort_split.json"
+
+
+def _sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    """Compute SHA256 for a file (incremental to avoid large memory use)."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _dataset_metadata(survival_csv: Path) -> dict:
+    """Return checksum + timestamp metadata for the survival dataset."""
+    stat = survival_csv.stat()
+    return {
+        "path": str(survival_csv.resolve()),
+        "sha256": _sha256_file(survival_csv),
+        "mtime": stat.st_mtime,
+        "size": stat.st_size,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def create_cohort_split(
@@ -135,6 +158,7 @@ def create_cohort_split(
         "train_eids": train_eids,
         "val_eids": val_eids,
         "test_eids": test_eids,
+        "dataset_meta": _dataset_metadata(survival_csv),
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -350,7 +350,8 @@ def evaluate_auc_pipeline(
                 total=d100k[0].shape[0] // batch_size + 1,
             ):
                 dd = [x.to(device) for x in dd]
-                outputs = model(*dd)[0].cpu().detach().numpy()
+                # Inference only: pass (x, a) so model does not compute loss (avoids target 1270 out of bounds when vocab_size=1270)
+                outputs = model(dd[0], dd[1])[0].cpu().detach().numpy()
                 # Keep only the columns corresponding to the current disease chunk
                 p100k.append(outputs[:, :, diseases_chunk].astype("float16"))  # enough to store logits, but not rates
         p100k = np.vstack(p100k)

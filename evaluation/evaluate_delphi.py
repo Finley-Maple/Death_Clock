@@ -1,52 +1,101 @@
 """
-Delphi evaluation adapter for the shared cohort.
+Delphi evaluation adapter aligned with the shared survival metrics.
 
-Uses the `evaluate_auc_pipeline()` function from Delphi/evaluate_auc.py
-as the canonical evaluation backend.
-
-This script:
-  1. Loads the Delphi model checkpoint.
-  2. Loads the test.bin (or val.bin) aligned with cohort_split.json.
-  3. Runs evaluate_auc_pipeline for the Death token.
-  4. Saves results to evaluation/delphi_results/.
-
-NOTE: Delphi binary data must be generated first using:
-    python Delphi/preprocess_delphi_binary.py
-
-Usage:
-    python evaluation/evaluate_delphi.py \
-        --ckpt-path Delphi/Delphi-2M-respiratory/ckpt.pt \
-        --data-path Delphi/data/ukb_respiratory_data \
-        --split test \
-        --device cuda
+Outputs:
+  - Patient-level risk scores for the Death token (per cohort split).
+  - Survival metrics (C-index, TD-AUC, IBS placeholder) using evaluation/metrics.py.
+  - Optional legacy DeLong summary via evaluate_auc_pipeline for comparison.
 """
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
+from typing import Dict, List, Sequence, Tuple
+
+os.environ.setdefault("PANDAS_NO_IMPORT_NUMEXPR", "1")
+os.environ.setdefault("PANDAS_NO_IMPORT_BOTTLENECK", "1")
 
 import numpy as np
 import pandas as pd
+import torch
 
-# Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "Delphi"))
 
-import torch
-from model import Delphi, DelphiConfig
-from utils import get_batch, get_p2i
-from evaluate_auc import evaluate_auc_pipeline
+from evaluation import data_access, metrics, survival_eval  # noqa: E402
+from model import Delphi, DelphiConfig  # noqa: E402
+from utils import get_batch, get_p2i  # noqa: E402
+from evaluate_auc import evaluate_auc_pipeline  # noqa: E402
 
 COHORT_SPLIT = PROJECT_ROOT / "evaluation" / "cohort_split.json"
+SURVIVAL_CSV = PROJECT_ROOT / "benchmarking" / "autoprognosis_survival_dataset.csv"
 DELPHI_LABELS = PROJECT_ROOT / "Delphi" / "delphi_labels_chapters_colours_icd.csv"
 DEFAULT_OUTPUT = PROJECT_ROOT / "evaluation" / "delphi_results"
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def parse_death_tokens(labels_df: pd.DataFrame) -> List[int]:
+    death_rows = labels_df[labels_df["name"].str.contains("Death", case=False, na=False)]
+    exact = death_rows[death_rows["name"].str.strip() == "Death"]
+    if len(exact) > 0:
+        return exact["index"].astype(int).tolist()
+    if len(death_rows) > 0:
+        return death_rows["index"].astype(int).tolist()
+    return [1269]
+
+
+def get_patient_ids(data: np.ndarray, p2i: np.ndarray, n_patients: int) -> np.ndarray:
+    starts = p2i[:n_patients, 0]
+    return data[starts, 0].astype(int)
+
+
+def collect_token_logits(
+    model: Delphi,
+    batch: Tuple[torch.Tensor, ...],
+    token_indices: Sequence[int],
+    batch_size: int,
+    device: str,
+) -> np.ndarray:
+    """Run Delphi model and extract logits for specified token indices.
+    Pass only (x, a) so the model runs in inference mode (no loss). Passing
+    targets would trigger cross_entropy and fail when targets contain 1270
+    (Death after +1 shift) with a checkpoint that has vocab_size=1270.
+    """
+    x, a, y, b = batch
+    splits = [torch.split(tensor, batch_size) for tensor in [x, a]]
+    logits = []
+    with torch.no_grad():
+        for mini_x, mini_a in zip(*splits):
+            mini_x = mini_x.to(device)
+            mini_a = mini_a.to(device)
+            outputs = model(mini_x, mini_a)[0].detach().cpu().numpy()
+            logits.append(outputs[:, :, token_indices])
+    return np.vstack(logits)
+
+
+def build_risk_scores(logits: np.ndarray) -> np.ndarray:
+    """
+    Aggregate per-patient logits to a scalar risk score.
+    Strategy: max logit across sequence and death-token variants.
+    """
+    if logits.size == 0:
+        return np.array([], dtype=np.float32)
+    return logits.max(axis=(1, 2))
+
+
+# ---------------------------------------------------------------------------
+# Main evaluation
+# ---------------------------------------------------------------------------
+
 def evaluate_delphi(args):
-    """Run Delphi death-token AUC evaluation on the shared cohort."""
     device = args.device
-    seed = args.seed
 
     # Load model
     print(f"Loading Delphi model from {args.ckpt_path}...")
@@ -57,33 +106,17 @@ def evaluate_delphi(args):
     model.eval()
     model = model.to(device)
 
-    # Load evaluation data
-    # Prefer test.bin for final evaluation; fall back to val.bin
+    # Load cohort + survival data for metrics
+    cohort = data_access.load_cohort(Path(args.cohort_json))
+    survival_df = data_access.load_survival_dataframe(Path(args.survival_csv))
+    data_access.assert_dataset_matches(cohort, Path(args.survival_csv))
+
+    # Load evaluation data (binary)
     data_dir = Path(args.data_path)
     split = args.split
     bin_path = data_dir / f"{split}.bin"
-
     if not bin_path.exists():
-        # Try fallback
-        fallbacks = ["test.bin", "val.bin"]
-        found = False
-        for fb in fallbacks:
-            candidate = data_dir / fb
-            if candidate.exists():
-                print(f"  {bin_path} not found, using {candidate} instead.")
-                bin_path = candidate
-                split = fb.replace(".bin", "")
-                found = True
-                break
-
-        if not found:
-            print(f"\nERROR: No binary data found in {data_dir}/")
-            print(f"  Expected: {data_dir}/test.bin or {data_dir}/val.bin")
-            print(f"\n  Run Delphi preprocessing first:")
-            print(f"    python Delphi/preprocess_delphi_binary.py")
-            print(f"\n  This will generate train.bin, val.bin, test.bin")
-            print(f"  aligned with the shared cohort_split.json.")
-            sys.exit(1)
+        raise FileNotFoundError(f"No binary data found at {bin_path}")
 
     print(f"Loading {split} data from {bin_path}...")
     data = np.fromfile(str(bin_path), dtype=np.uint32).reshape(-1, 3).astype(np.int64)
@@ -92,8 +125,9 @@ def evaluate_delphi(args):
     n_patients = len(data_p2i)
     if args.max_patients > 0:
         n_patients = min(n_patients, args.max_patients)
-
+    patient_eids = get_patient_ids(data, data_p2i, n_patients)
     print(f"Evaluating on {n_patients} patients ({split} split)...")
+
     d_batch = get_batch(
         range(n_patients),
         data,
@@ -105,72 +139,120 @@ def evaluate_delphi(args):
         no_event_token_rate=args.no_event_token_rate,
     )
 
-    # Load labels
+    # Load labels + death tokens
     delphi_labels = pd.read_csv(DELPHI_LABELS)
-
-    # Find Death token index
-    death_rows = delphi_labels[delphi_labels["name"].str.contains("Death", case=False, na=False)]
-    # Exclude ICD codes about death (e.g. "O96 Death from ...") - only want the
-    # pure "Death" label
-    death_rows_exact = death_rows[death_rows["name"].str.strip() == "Death"]
-    if len(death_rows_exact) > 0:
-        death_token_ids = death_rows_exact["index"].tolist()
-    elif len(death_rows) > 0:
-        death_token_ids = death_rows["index"].tolist()
-    else:
-        # Fallback to known index
-        death_token_ids = [1269]
+    death_token_ids = parse_death_tokens(delphi_labels)
     print(f"Death token indices: {death_token_ids}")
 
-    # Run evaluation
-    output_path = Path(args.output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    # Inference for death tokens
+    death_logits = collect_token_logits(model, d_batch, death_token_ids, args.batch_size, device)
+    risk_scores = build_risk_scores(death_logits)
+    risk_map = dict(zip(patient_eids.tolist(), risk_scores.tolist()))
 
+    # Align with survival targets
+    split_eids = cohort[f"{split}_eids"]
+    split_df, missing_surv = data_access.align_split_dataframe(survival_df, split_eids)
+    if missing_surv:
+        print(f"[evaluate_delphi] Warning: {len(missing_surv)} {split} eids missing from survival CSV.")
+
+    aligned_risk = []
+    durations = []
+    events = []
+    aligned_eids = []
+    missing_preds = []
+
+    for _, row in split_df.iterrows():
+        eid = int(row["eid"])
+        score = risk_map.get(eid)
+        if score is None:
+            missing_preds.append(eid)
+            continue
+        aligned_risk.append(score)
+        durations.append(float(row["duration_days"]))
+        events.append(int(row["event_flag"]))
+        aligned_eids.append(eid)
+
+    if not aligned_risk:
+        raise RuntimeError("No overlapping Delphi predictions with survival cohort.")
+
+    aligned_risk = np.asarray(aligned_risk, dtype=np.float64)
+    durations = np.asarray(durations, dtype=np.float64)
+    events = np.asarray(events, dtype=np.int32)
+
+    train_df, _ = data_access.align_split_dataframe(survival_df, cohort["train_eids"])
+    train_struct = metrics.to_structured(
+        train_df["duration_days"].to_numpy(dtype=np.float64),
+        train_df["event_flag"].to_numpy(dtype=np.int32),
+    )
+    eval_struct = metrics.to_structured(durations, events)
+
+    horizons = args.horizons_days
+    if not horizons:
+        horizons = metrics.derive_time_horizons(train_df["duration_days"].to_numpy(dtype=np.float64))
+    horizons = sorted({int(h) for h in horizons if h > 0})
+
+    split_metrics = metrics.compute_metrics(
+        train_struct,
+        eval_struct,
+        aligned_risk,
+        horizons,
+        survival_probs=None,
+    )
+    split_metrics["size"] = len(aligned_eids)
+    split_metrics["event_rate"] = float(events.mean())
+
+    if args.save_preds:
+        survival_eval.save_predictions(
+            Path(args.output_dir) / "predictions",
+            "delphi",
+            split,
+            aligned_eids,
+            aligned_risk,
+            horizons,
+            survival_probs=None,
+        )
+
+    # Optional legacy DeLong summary
     df_unpooled, df_pooled = evaluate_auc_pipeline(
         model=model,
         d100k=d_batch,
-        output_path=str(output_path),
+        output_path=str(Path(args.output_dir)),
         delphi_labels=delphi_labels,
         diseases_of_interest=death_token_ids,
-        filter_min_total=0,  # we want Death even if rare in val
-        disease_chunk_size=200,
+        filter_min_total=0,
+        disease_chunk_size=64,
         age_groups=np.arange(40, 80, 5),
         offset=args.offset,
         batch_size=args.batch_size,
         device=device,
-        seed=seed,
+        seed=args.seed,
         n_bootstrap=args.n_bootstrap,
         meta_info={"method": "delphi", "cohort": "shared", "split": split},
     )
-
-    print(f"\n=== Delphi Death Token AUC Results ({split} split) ===")
     death_results = df_pooled[df_pooled["name"].str.contains("Death", case=False, na=False)]
-    if len(death_results) > 0:
-        for _, row in death_results.iterrows():
-            auc_val = row.get("auc", float("nan"))
-            auc_var = row.get("auc_variance_delong", float("nan"))
-            ci_lo = auc_val - 1.96 * np.sqrt(auc_var) if not np.isnan(auc_var) else float("nan")
-            ci_hi = auc_val + 1.96 * np.sqrt(auc_var) if not np.isnan(auc_var) else float("nan")
-            print(f"  Token: {row.get('name', '?')}")
-            print(f"  AUC (DeLong): {auc_val:.4f} [{ci_lo:.4f}, {ci_hi:.4f}]")
-            print(f"  N diseased: {row.get('n_diseased', '?')}, N healthy: {row.get('n_healthy', '?')}")
-    else:
-        print("  No Death token results found.")
 
-    # Save summary
-    summary = {
+    coverage = data_access.coverage_report(split_eids, aligned_eids)
+    coverage["missing_predictions"] = missing_preds[:5]
+
+    results = {
         "method": "delphi",
         "split": split,
-        "n_patients": n_patients,
+        "risk_strategy": "max_logit_per_patient",
+        "horizons": horizons,
+        "splits": {split: split_metrics},
+        "coverage": coverage,
         "death_token_ids": death_token_ids,
-        "results": death_results.to_dict("records") if len(death_results) > 0 else [],
+        "delong_summary": death_results.to_dict("records"),
     }
-    summary_path = output_path / "delphi_death_summary.json"
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, indent=2, default=str)
-    print(f"\nSummary saved to {summary_path}")
 
-    return df_unpooled, df_pooled
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    results_path = output_dir / f"delphi_{split}_results.json"
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nResults saved to {results_path}")
+
+    return results
 
 
 def main():
@@ -191,6 +273,12 @@ def main():
     parser.add_argument("--max-patients", type=int, default=-1,
                         help="Max patients to evaluate (-1 for all).")
     parser.add_argument("--n-bootstrap", type=int, default=1)
+    parser.add_argument("--survival-csv", type=str, default=str(SURVIVAL_CSV))
+    parser.add_argument("--cohort-json", type=str, default=str(COHORT_SPLIT))
+    parser.add_argument("--horizons-days", type=int, nargs="*", default=None,
+                        help="Optional explicit evaluation horizons in days.")
+    parser.add_argument("--save-preds", action="store_true",
+                        help="If set, save risk predictions to output/predictions.")
     args = parser.parse_args()
 
     evaluate_delphi(args)

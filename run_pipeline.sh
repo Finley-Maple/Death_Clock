@@ -113,7 +113,8 @@ should_run() {
 # ============================================================================
 # Logging
 # ============================================================================
-LOG_FILE="pipeline_$(date +%Y%m%d_%H%M%S).log"
+mkdir -p logs
+LOG_FILE="logs/pipeline_$(date +%Y%m%d_%H%M%S).log"
 
 log() {
     local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
