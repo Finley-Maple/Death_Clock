@@ -389,6 +389,18 @@ def evaluate_auc_pipeline(
     for key, value in meta_info.items():
         df_auc_unpooled[key] = value
 
+    # Ensure required columns exist even if no rows were produced (e.g., rare tokens)
+    required_cols = {
+        "token": np.int64,
+        "auc_delong": np.float64,
+        "auc_variance_delong": np.float64,
+        "n_diseased": np.float64,
+        "n_healthy": np.float64,
+    }
+    for col, dtype in required_cols.items():
+        if col not in df_auc_unpooled.columns:
+            df_auc_unpooled[col] = pd.Series(dtype=dtype)
+
     delphi_labels_subset = delphi_labels[['index', 'ICD-10 Chapter (short)', 'name', 'color', 'count']]
     df_auc_unpooled_merged = df_auc_unpooled.merge(delphi_labels_subset, left_on="token", right_on="index", how="inner")
 
@@ -401,6 +413,7 @@ def evaluate_auc_pipeline(
         # Since we're taking the average, divide combined variance by n^2
         var = group['auc_variance_delong'].sum() / (n**2)
         return pd.Series({
+            'token': group.name,
             'auc': mean,
             'auc_variance_delong': var,
             'n_samples': n, 
@@ -410,7 +423,11 @@ def evaluate_auc_pipeline(
 
     print('Using DeLong method to calculate AUC confidence intervals..')
     
-    df_auc = df_auc_unpooled.groupby(["token"]).apply(aggregate_age_brackets_delong).reset_index()
+    df_auc = (
+        df_auc_unpooled.groupby("token")
+        .apply(aggregate_age_brackets_delong)
+        .reset_index(drop=True)
+    )
     df_auc_merged = df_auc.merge(delphi_labels, left_on="token", right_on="index", how="inner")
     
     if output_path is not None:
