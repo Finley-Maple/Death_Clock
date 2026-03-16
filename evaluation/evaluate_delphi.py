@@ -5,6 +5,8 @@ Outputs:
   - Patient-level risk scores for the Death token (per cohort split).
   - Survival metrics (C-index, TD-AUC, IBS placeholder) using evaluation/metrics.py.
   - Optional legacy DeLong summary via evaluate_auc_pipeline for comparison.
+  - Optional CoxPH head (--cox): runs inference on all splits, trains CoxPH on
+    train logits+labels, evaluates on val/test — same pipeline as embedding methods.
 """
 
 import argparse
@@ -88,6 +90,157 @@ def build_risk_scores(logits: np.ndarray) -> np.ndarray:
     if logits.size == 0:
         return np.array([], dtype=np.float32)
     return logits.max(axis=(1, 2))
+
+
+def run_inference_on_bin(
+    model: Delphi,
+    bin_path: Path,
+    death_token_ids: List[int],
+    batch_size: int,
+    device: str,
+    block_size: int = 80,
+    no_event_token_rate: int = 5,
+    max_patients: int = -1,
+) -> Dict[int, float]:
+    """
+    Load a .bin file, run Delphi inference, and return {eid: risk_score}.
+    Extracted so the same logic can be reused across splits for CoxPH.
+    """
+    data = np.fromfile(str(bin_path), dtype=np.uint32).reshape(-1, 3).astype(np.int64)
+    data_p2i = get_p2i(data)
+    n_patients = len(data_p2i)
+    if max_patients > 0:
+        n_patients = min(n_patients, max_patients)
+
+    patient_eids = get_patient_ids(data, data_p2i, n_patients)
+    print(f"  Loaded {n_patients} patients from {bin_path.name}")
+
+    d_batch = get_batch(
+        range(n_patients),
+        data,
+        data_p2i,
+        select="left",
+        block_size=block_size,
+        device=device,
+        padding="random",
+        no_event_token_rate=no_event_token_rate,
+    )
+
+    death_logits = collect_token_logits(model, d_batch, death_token_ids, batch_size, device)
+    risk_scores = build_risk_scores(death_logits)
+    return dict(zip(patient_eids.tolist(), risk_scores.tolist()))
+
+
+# ---------------------------------------------------------------------------
+# CoxPH head on Delphi logits
+# ---------------------------------------------------------------------------
+
+def evaluate_delphi_cox(args) -> Dict:
+    """
+    Run inference on all three splits, save logits as .npz, then train a
+    CoxPH on the train-split logits+labels and evaluate on val/test.
+
+    This gives Delphi the same supervised adaptation as the embedding methods,
+    making the cross-method comparison fair.
+    """
+    device = args.device
+
+    print(f"Loading Delphi model from {args.ckpt_path}...")
+    checkpoint = torch.load(args.ckpt_path, map_location=device)
+    conf = DelphiConfig(**checkpoint["model_args"])
+    model = Delphi(conf)
+    model.load_state_dict(checkpoint["model"])
+    model.eval()
+    model = model.to(device)
+
+    delphi_labels = pd.read_csv(DELPHI_LABELS)
+    death_token_ids = parse_death_tokens(delphi_labels)
+    print(f"Death token indices: {death_token_ids}")
+
+    cohort = data_access.load_cohort(Path(args.cohort_json))
+    survival_df = data_access.load_survival_dataframe(Path(args.survival_csv))
+    data_access.assert_dataset_matches(cohort, Path(args.survival_csv))
+
+    data_dir = Path(args.data_path)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Run inference on all three splits
+    all_logits: Dict[int, float] = {}
+    for split_name in ["train", "val", "test"]:
+        bin_path = data_dir / f"{split_name}.bin"
+        if not bin_path.exists():
+            print(f"  Warning: {bin_path} not found, skipping.")
+            continue
+        print(f"\nRunning inference on {split_name} split...")
+        split_logits = run_inference_on_bin(
+            model, bin_path, death_token_ids,
+            batch_size=args.batch_size,
+            device=device,
+            block_size=80,
+            no_event_token_rate=args.no_event_token_rate,
+            max_patients=args.max_patients,
+        )
+        all_logits.update(split_logits)
+
+    # Save logits as .npz keyed by eid (shape (1,) so it works as a 1-D embedding)
+    logits_dir = output_dir / "delphi_logits"
+    logits_dir.mkdir(parents=True, exist_ok=True)
+    npz_path = logits_dir / "delphi_logits_embeddings.npz"
+    np.savez_compressed(npz_path, **{str(eid): np.array([score], dtype=np.float32)
+                                     for eid, score in all_logits.items()})
+    meta_path = logits_dir / "delphi_logits_embedding_metadata.json"
+    meta_path.write_text(json.dumps({
+        "num_patients": len(all_logits),
+        "embedding_dim": 1,
+        "description": "Delphi Death-token max logit per patient",
+        "death_token_ids": death_token_ids,
+        "eids": sorted(all_logits.keys()),
+    }, indent=2))
+    print(f"\nSaved {len(all_logits)} patient logits to {npz_path}")
+
+    # Build feature matrices per split using the logit as the single feature
+    baseline_cfg = data_access.BaselineConfig(mode="none")  # logit only, no extra baseline
+    matrices, _, _ = survival_eval.load_survival_matrices(
+        baseline_cfg,
+        survival_csv=Path(args.survival_csv),
+        cohort_json=Path(args.cohort_json),
+    )
+
+    # Merge logit into each split's feature matrix
+    embeddings = {int(eid): np.array([score], dtype=np.float32)
+                  for eid, score in all_logits.items()}
+    combined_matrices = {}
+    for split_name, matrix in matrices.items():
+        combined, cov = survival_eval.merge_with_embeddings(matrix, embeddings)
+        combined_matrices[split_name] = combined
+        print(f"  {split_name} coverage after merge: {cov}")
+
+    cox_cfg = survival_eval.CoxConfig(
+        penalizer=args.penalizer,
+        l1_ratio=args.l1_ratio,
+        fallback_penalizer=args.fallback_penalizer,
+        fallback_l1_ratio=args.fallback_l1_ratio,
+    )
+
+    results = survival_eval.run_cox_evaluation(
+        combined_matrices,
+        cox_cfg,
+        horizons=args.horizons_days if args.horizons_days else None,
+        save_preds_dir=None,
+        method_name="delphi_cox",
+    )
+    results["metadata"] = {
+        "death_token_ids": death_token_ids,
+        "logits_npz": str(npz_path),
+        "description": "CoxPH trained on Delphi Death-token logits",
+    }
+
+    results_path = output_dir / "delphi_cox_results.json"
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nDelphi+CoxPH results saved to {results_path}")
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +416,7 @@ def main():
                         default=str(PROJECT_ROOT / "Delphi" / "data" / "ukb_respiratory_data"))
     parser.add_argument("--split", type=str, default="test",
                         choices=["train", "val", "test"],
-                        help="Which split to evaluate on (default: test)")
+                        help="Which split to evaluate on in zero-shot mode (default: test)")
     parser.add_argument("--output-dir", type=str, default=str(DEFAULT_OUTPUT))
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=1337)
@@ -279,9 +432,21 @@ def main():
                         help="Optional explicit evaluation horizons in days.")
     parser.add_argument("--save-preds", action="store_true",
                         help="If set, save risk predictions to output/predictions.")
+    # CoxPH head arguments
+    parser.add_argument("--cox", action="store_true",
+                        help="Run Delphi+CoxPH: infer on all splits, train CoxPH on "
+                             "train logits+labels, evaluate on val/test. Saves results "
+                             "to delphi_cox_results.json.")
+    parser.add_argument("--penalizer", type=float, default=0.1)
+    parser.add_argument("--l1-ratio", type=float, default=0.5)
+    parser.add_argument("--fallback-penalizer", type=float, default=1.0)
+    parser.add_argument("--fallback-l1-ratio", type=float, default=0.9)
     args = parser.parse_args()
 
-    evaluate_delphi(args)
+    if args.cox:
+        evaluate_delphi_cox(args)
+    else:
+        evaluate_delphi(args)
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ EMBEDDING_RESULTS = EVALUATION_DIR / "embedding_results"
 # ---------------------------------------------------------------------------
 
 def load_delphi_results() -> Optional[Dict]:
-    """Load Delphi survival-aligned results (prefer test split)."""
+    """Load Delphi zero-shot results (prefer test split)."""
     for split in ["test", "val", "train"]:
         results_path = DELPHI_RESULTS / f"delphi_{split}_results.json"
         if results_path.exists():
@@ -71,6 +71,16 @@ def load_delphi_results() -> Optional[Dict]:
 
     print("  [Delphi] Results not found. Run evaluation/evaluate_delphi.py")
     return None
+
+
+def load_delphi_cox_results() -> Optional[Dict]:
+    """Load Delphi+CoxPH results (inference on all splits, CoxPH trained on train)."""
+    results_path = DELPHI_RESULTS / "delphi_cox_results.json"
+    if not results_path.exists():
+        print(f"  [Delphi+CoxPH] Results not found. Run: python evaluation/evaluate_delphi.py --cox")
+        return None
+    with open(results_path) as f:
+        return json.load(f)
 
 
 def load_benchmarking_results() -> Optional[Dict]:
@@ -151,6 +161,23 @@ def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFra
                 "test_auc_ci": f"[{ci_lo:.4f}, {ci_hi:.4f}]" if ci_lo is not None else None,
             }
         rows.append(row)
+
+    # Delphi + CoxPH
+    delphi_cox = all_results.get("delphi_cox")
+    if delphi_cox:
+        dcox_test = extract_split_metrics(delphi_cox, "test")
+        dcox_val  = extract_split_metrics(delphi_cox, "val")
+        rows.append({
+            "method": "Delphi + CoxPH",
+            "test_c_index": dcox_test.get("c_index"),
+            "test_mean_td_auc": dcox_test.get("mean_td_auc"),
+            "test_ibs": dcox_test.get("ibs"),
+            "val_c_index": dcox_val.get("c_index"),
+            "val_mean_td_auc": dcox_val.get("mean_td_auc"),
+            "notes": str(delphi_cox.get("metadata", {}).get("description")),
+            "test_auc_delong": None,
+            "test_auc_ci": None,
+        })
 
     # Benchmarking
     bench = all_results.get("benchmarking")
@@ -274,7 +301,8 @@ def print_horizon_details(all_results: Dict[str, Optional[Dict]]):
     print("=" * 70)
 
     for label, key in [
-        ("Delphi", "delphi"),
+        ("Delphi (zero-shot)", "delphi"),
+        ("Delphi + CoxPH", "delphi_cox"),
         ("Benchmarking", "benchmarking"),
         ("Text Embedding", "text_embedding"),
         ("Trajectory Embedding", "trajectory_embedding"),
@@ -315,6 +343,7 @@ def run_unified_evaluation() -> pd.DataFrame:
     print("\nLoading method results...")
     all_results = {
         "delphi": load_delphi_results(),
+        "delphi_cox": load_delphi_cox_results(),
         "benchmarking": load_benchmarking_results(),
         "text_embedding": load_embedding_results("text_embedding"),
         "trajectory_embedding": load_embedding_results("trajectory_embedding"),
