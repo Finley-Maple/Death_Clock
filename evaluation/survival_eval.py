@@ -57,6 +57,9 @@ class CoxConfig:
     l1_ratio: float = 0.5
     fallback_penalizer: float = 1.0
     fallback_l1_ratio: float = 0.9
+    # PCA before CoxPH: reduces high-dim embeddings to tractable size.
+    # None = no PCA (fine for ≤~200 features). Set to 64 for 1024+ dim embeddings.
+    pca_components: Optional[int] = None
 
 
 def load_survival_matrices(
@@ -236,6 +239,21 @@ def run_cox_evaluation(
     other_splits = {k: v for k, v in matrices.items() if k != "train"}
 
     train_matrix_std, other_splits_std, stats = standardize_features(train_matrix, other_splits)
+
+    # PCA dimensionality reduction (fit on train, apply to all splits)
+    pca = None
+    if cox_config.pca_components is not None and train_matrix_std.X.shape[1] > cox_config.pca_components:
+        from sklearn.decomposition import PCA
+        n_components = min(cox_config.pca_components, train_matrix_std.X.shape[0], train_matrix_std.X.shape[1])
+        pca = PCA(n_components=n_components, random_state=42)
+        print(f"[run_cox_evaluation] PCA: {train_matrix_std.X.shape[1]} → {n_components} dims")
+        train_X_pca = pca.fit_transform(train_matrix_std.X)
+        train_matrix_std = FeatureMatrix(train_X_pca.astype(np.float32), train_matrix_std.durations, train_matrix_std.events, train_matrix_std.eids)
+        other_splits_std = {
+            k: FeatureMatrix(pca.transform(v.X).astype(np.float32), v.durations, v.events, v.eids)
+            for k, v in other_splits_std.items()
+        }
+
     col_names = [f"f{i}" for i in range(train_matrix_std.X.shape[1])]
 
     df_train = pd.DataFrame(train_matrix_std.X, columns=col_names)
