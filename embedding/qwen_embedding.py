@@ -214,6 +214,8 @@ class EmbeddingConfig:
     normalize: bool = True
     # Use flash_attention_2 for faster inference on GPU
     use_flash_attn: bool = True
+    # HuggingFace access token (required for gated models)
+    hf_token: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -244,13 +246,13 @@ class QwenEmbeddingExtractor:
             err_msg = str(e).lower()
             if "can't load" in err_msg and "config" in err_msg:
                 logger.warning(
-                    "Transformers failed to load config (often due to cache or local path). "
-                    "Retrying once with force_download=True..."
+                    "Transformers failed to load config: %s", e
                 )
+                logger.warning("Retrying once with force_download=True...")
                 try:
                     self._load_model_transformers(force_download=True)
-                except OSError:
-                    logger.warning("Retry failed. Trying sentence-transformers fallback...")
+                except OSError as e2:
+                    logger.warning("Retry failed (%s). Trying sentence-transformers fallback...", e2)
                     self._load_model_sentence_transformers()
             else:
                 raise
@@ -264,6 +266,8 @@ class QwenEmbeddingExtractor:
         load_kw = {"trust_remote_code": True}
         if force_download:
             load_kw["force_download"] = True
+        if self.config.hf_token:
+            load_kw["token"] = self.config.hf_token
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.config.model_name,
@@ -309,11 +313,10 @@ class QwenEmbeddingExtractor:
             ) from None
 
         logger.info("Loading with sentence-transformers...")
-        self._st_model = SentenceTransformer(
-            self.config.model_name,
-            device=self.config.device,
-            trust_remote_code=True,
-        )
+        st_kwargs = {"device": self.config.device, "trust_remote_code": True}
+        if self.config.hf_token:
+            st_kwargs["token"] = self.config.hf_token
+        self._st_model = SentenceTransformer(self.config.model_name, **st_kwargs)
         # SentenceTransformer.encode returns normalized vectors by default for many models
         native_dim = MODEL_DEFAULT_DIM.get(self.config.model_name, 1024)
         logger.info(f"Model loaded (sentence-transformers)! Embedding dim: {native_dim}")
@@ -548,7 +551,13 @@ Model choices (pick based on hardware):
                         help="Skip L2 normalization of embeddings.")
     parser.add_argument("--no-flash-attn", action="store_true",
                         help="Disable flash_attention_2.")
+    parser.add_argument("--hf-token", type=str, default=None,
+                        help="HuggingFace access token (or set HF_TOKEN env var).")
     args = parser.parse_args()
+
+    # Accept token from env var as fallback
+    import os
+    hf_token = args.hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 
     # Load texts first (no model needed)
     if args.input_dir:
@@ -571,6 +580,7 @@ Model choices (pick based on hardware):
         instruction=args.instruction,
         normalize=not args.no_normalize,
         use_flash_attn=not args.no_flash_attn,
+        hf_token=hf_token,
     )
 
     processor = PatientEmbeddingProcessor(config=config)
