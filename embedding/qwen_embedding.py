@@ -63,14 +63,18 @@ def _patch_broken_torchvision():
       2. torchvision installed but incompatible with torch (RuntimeError/OSError) —
          common on shared servers where conda torchvision + pip torch versions clash.
 
-    transformers 5.x needs: torchvision.transforms.InterpolationMode
-                            torchvision.io.ImageReadMode, decode_image
-    Both are stubbed out since we never do image work here.
+    transformers 5.x image_utils.py imports from torchvision:
+      torchvision.io                    — ImageReadMode, decode_image
+      torchvision.transforms            — InterpolationMode
+      torchvision.transforms.functional — center_crop, normalize, pil_to_tensor,
+                                          resize, to_pil_image
+    All stubbed as no-ops since we never do image work here.
     """
     broken = False
     try:
         import torchvision  # noqa: F401
-        import torchvision.io  # noqa: F401  — verify submodule works too
+        import torchvision.io  # noqa: F401
+        import torchvision.transforms.functional  # noqa: F401
     except (ImportError, RuntimeError, OSError):
         broken = True
 
@@ -92,20 +96,28 @@ def _patch_broken_torchvision():
         sys.modules[name] = m
         return m
 
+    _noop = lambda *a, **kw: None  # noqa: E731
+
     stub = _make_stub("torchvision")
     stub.__version__ = "0.0.0"
 
-    # torchvision.transforms — InterpolationMode used by transformers image utils
+    # torchvision.transforms — InterpolationMode
     transforms_stub = _make_stub("torchvision.transforms")
     transforms_stub.InterpolationMode = type("InterpolationMode", (), {
         "BILINEAR": 2, "BICUBIC": 3, "NEAREST": 0, "LANCZOS": 1,
     })
     stub.transforms = transforms_stub
 
-    # torchvision.io — ImageReadMode / decode_image used by transformers image_utils.py
+    # torchvision.transforms.functional — image ops used by transformers image_utils.py
+    functional_stub = _make_stub("torchvision.transforms.functional")
+    for _fn in ("center_crop", "normalize", "pil_to_tensor", "resize", "to_pil_image"):
+        setattr(functional_stub, _fn, _noop)
+    transforms_stub.functional = functional_stub
+
+    # torchvision.io — ImageReadMode / decode_image
     io_stub = _make_stub("torchvision.io")
     io_stub.ImageReadMode = type("ImageReadMode", (), {"RGB": 3, "GRAY": 1, "UNCHANGED": 0})
-    io_stub.decode_image = lambda *a, **kw: None
+    io_stub.decode_image = _noop
     stub.io = io_stub
 
 _patch_broken_torchvision()
