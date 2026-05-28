@@ -193,13 +193,20 @@ class NaturalTextConverter:
                 sex = 'unknown sex'
             demo_parts.append(f"This {sex} patient")
         
-        # Age (calculate from birth year)
+        # Age (calculate from birth year relative to assessment date)
         birth_year_value = self._get_field_value(patient_data, 'p34')
         if birth_year_value is not None:
             try:
                 birth_year = int(float(birth_year_value))
-                current_year = datetime.now().year
-                age = current_year - birth_year
+                assessment_date = self._get_field_value(patient_data, 'p53')
+                if assessment_date is not None:
+                    try:
+                        reference_year = pd.to_datetime(str(assessment_date)).year
+                    except Exception:
+                        reference_year = 2010  # UKB enrollment midpoint fallback
+                else:
+                    reference_year = 2010
+                age = reference_year - birth_year
                 demo_parts.append(f"aged {age} years")
             except:
                 pass
@@ -246,12 +253,11 @@ class NaturalTextConverter:
             except:
                 pass
         
-        # Weight
-        weight_value = self._get_field_value(patient_data, 'p23104') # its BMI actually
+        # Weight (p21002: weight in kg)
+        weight_value = self._get_field_value(patient_data, 'p21002')
         if weight_value is not None:
             try:
-                BMI = float(weight_value)
-                weight = BMI * height**2 / 10000
+                weight = float(weight_value)
                 demo_parts.append(f"and weight {weight:.1f} kg")
             except:
                 pass
@@ -348,7 +354,7 @@ class NaturalTextConverter:
             'p30120': ('Lymphocyte count', '× 10⁹/L'),
             'p30130': ('Monocyte count', '× 10⁹/L'),
             'p30140': ('Eosinophil count', '× 10⁹/L'),
-            'p30150': ('Eosinophil count', '× 10⁹/L'),
+            'p30150': ('Neutrophil count', '× 10⁹/L'),
         }
         
         blood_values = []

@@ -125,7 +125,6 @@ def align_split_dataframe(df: pd.DataFrame, eids: Sequence[int]) -> Tuple[pd.Dat
     missing_mask = aligned["event_flag"].isna() & aligned["duration_days"].isna()
     missing = [int(eid) for eid in aligned.index[missing_mask]]
     aligned = aligned[~missing_mask].reset_index()
-    aligned.rename(columns={"index": "eid"}, inplace=True)
     aligned["eid"] = aligned["eid"].astype(int)
     return aligned, missing
 

@@ -11,7 +11,10 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 os.environ.setdefault("PANDAS_NO_IMPORT_NUMEXPR", "1")
 os.environ.setdefault("PANDAS_NO_IMPORT_BOTTLENECK", "1")
 
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 try:
     from lifelines.utils import concordance_index
@@ -102,7 +105,8 @@ def compute_metrics(
                 train_structured, eval_structured, survival_probs, horizons
             )
             result["ibs"] = float(ibs_val)
-        except Exception:
+        except Exception as exc:
+            logger.warning("IBS computation failed: %s", exc)
             result["ibs"] = None
     else:
         result["ibs"] = None
