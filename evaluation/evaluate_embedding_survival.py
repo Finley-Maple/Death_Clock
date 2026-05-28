@@ -85,6 +85,7 @@ def evaluate_embeddings(args):
         l1_ratio=args.l1_ratio,
         fallback_penalizer=args.fallback_penalizer,
         fallback_l1_ratio=args.fallback_l1_ratio,
+        pca_components=args.pca_components,
     )
 
     preds_dir = Path(args.preds_dir) if args.save_preds else None
@@ -134,6 +135,10 @@ def main():
                         help="Path to autoprognosis_survival_dataset.csv.")
     parser.add_argument("--cohort-json", type=str, default=str(COHORT_SPLIT),
                         help="Path to cohort_split.json.")
+    parser.add_argument("--pca-components", type=int, default=64,
+                        help="Reduce embeddings to this many PCA dims before CoxPH "
+                             "(avoids hours-long fits with 1024+ dim embeddings). "
+                             "Set to 0 to disable PCA.")
     parser.add_argument("--penalizer", type=float, default=0.1)
     parser.add_argument("--l1-ratio", type=float, default=0.5)
     parser.add_argument("--fallback-penalizer", type=float, default=1.0)
@@ -146,6 +151,8 @@ def main():
                         help="Directory to store results JSON.")
     args = parser.parse_args()
 
+    if args.pca_components == 0:
+        args.pca_components = None
     evaluate_embeddings(args)
 
 
