@@ -56,69 +56,58 @@ import importlib
 import types
 
 def _patch_broken_torchvision():
-    """If torchvision is broken, inject a minimal stub so transformers skips it.
+    """If torchvision is broken, make it invisible to transformers.
 
-    Two failure modes handled:
-      1. torchvision not installed (ImportError)
-      2. torchvision installed but incompatible with torch (RuntimeError/OSError) —
-         common on shared servers where conda torchvision + pip torch versions clash.
+    Problem: conda torchvision + pip torch version mismatch causes
+    RuntimeError ('operator torchvision::nms does not exist') when
+    torchvision is imported on shared GPU servers.
 
-    transformers 5.x image_utils.py imports from torchvision:
-      torchvision.io                    — ImageReadMode, decode_image
-      torchvision.transforms            — InterpolationMode
-      torchvision.transforms.functional — center_crop, normalize, pil_to_tensor,
-                                          resize, to_pil_image
-    All stubbed as no-ops since we never do image work here.
+    Stubbing individual submodules is fragile — transformers imports from
+    many torchvision locations and the list changes across versions.
+
+    Robust fix: patch importlib.util.find_spec so it returns None for any
+    torchvision query. This makes transformers.utils.is_torchvision_available()
+    return False, skipping ALL torchvision-gated imports in one shot.
+    A minimal top-level stub is also injected as a safety net for any
+    ungated 'import torchvision' calls.
     """
     broken = False
     try:
         import torchvision  # noqa: F401
         import torchvision.io  # noqa: F401
         import torchvision.transforms.functional  # noqa: F401
-    except (ImportError, RuntimeError, OSError):
+    except Exception:
         broken = True
 
     if not broken:
         return
 
-    # Remove any partially-loaded torchvision submodules from sys.modules
+    # Remove any partially-loaded torchvision submodules
     for key in list(sys.modules.keys()):
         if key == "torchvision" or key.startswith("torchvision."):
             del sys.modules[key]
 
-    def _make_stub(name):
-        m = types.ModuleType(name)
-        m.__path__ = []
-        try:
-            m.__spec__ = importlib.machinery.ModuleSpec(name, None, origin="stub")
-        except Exception:
-            m.__spec__ = types.SimpleNamespace(origin="stub")
-        sys.modules[name] = m
-        return m
+    # Patch find_spec so is_torchvision_available() returns False in transformers,
+    # suppressing all torchvision-gated imports without enumerating them.
+    import importlib.util as _ilu
+    _orig_find_spec = _ilu.find_spec
 
-    _noop = lambda *a, **kw: None  # noqa: E731
+    def _patched_find_spec(name, *args, **kwargs):
+        if name == "torchvision" or (isinstance(name, str) and name.startswith("torchvision.")):
+            return None
+        return _orig_find_spec(name, *args, **kwargs)
 
-    stub = _make_stub("torchvision")
+    _ilu.find_spec = _patched_find_spec
+
+    # Minimal top-level stub as safety net for any ungated 'import torchvision'
+    stub = types.ModuleType("torchvision")
     stub.__version__ = "0.0.0"
-
-    # torchvision.transforms — InterpolationMode
-    transforms_stub = _make_stub("torchvision.transforms")
-    transforms_stub.InterpolationMode = type("InterpolationMode", (), {
-        "BILINEAR": 2, "BICUBIC": 3, "NEAREST": 0, "LANCZOS": 1,
-    })
-    stub.transforms = transforms_stub
-
-    # torchvision.transforms.functional — image ops used by transformers image_utils.py
-    functional_stub = _make_stub("torchvision.transforms.functional")
-    for _fn in ("center_crop", "normalize", "pil_to_tensor", "resize", "to_pil_image"):
-        setattr(functional_stub, _fn, _noop)
-    transforms_stub.functional = functional_stub
-
-    # torchvision.io — ImageReadMode / decode_image
-    io_stub = _make_stub("torchvision.io")
-    io_stub.ImageReadMode = type("ImageReadMode", (), {"RGB": 3, "GRAY": 1, "UNCHANGED": 0})
-    io_stub.decode_image = _noop
-    stub.io = io_stub
+    stub.__path__ = []
+    try:
+        stub.__spec__ = importlib.machinery.ModuleSpec("torchvision", None, origin="stub")
+    except Exception:
+        stub.__spec__ = types.SimpleNamespace(origin="stub")
+    sys.modules["torchvision"] = stub
 
 _patch_broken_torchvision()
 
