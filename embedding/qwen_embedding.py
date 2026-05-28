@@ -306,11 +306,11 @@ class QwenEmbeddingExtractor:
         """Load using sentence-transformers (recommended by model card when transformers fails)."""
         try:
             from sentence_transformers import SentenceTransformer
-        except ImportError:
+        except Exception as e:
             raise ImportError(
-                "Transformers failed to load the model and sentence-transformers is not installed. "
-                "Install it for fallback: pip install sentence-transformers"
-            ) from None
+                f"sentence-transformers import failed ({type(e).__name__}: {e}). "
+                "If it is not installed: pip install sentence-transformers"
+            ) from e
 
         logger.info("Loading with sentence-transformers...")
         st_kwargs = {"device": self.config.device, "trust_remote_code": True}
