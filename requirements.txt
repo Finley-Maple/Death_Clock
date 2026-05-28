@@ -38,6 +38,7 @@ torch>=2.4.0
 # ---------------------------------------------------------------------------
 transformers>=4.53.0              # Qwen3Model architecture support
 accelerate>=0.25.0                # Model loading / device_map
+sentence-transformers>=3.0.0      # SentenceTransformer backend for Qwen3-Embedding
 
 # ---------------------------------------------------------------------------
 # Survival analysis (benchmarking + evaluation)

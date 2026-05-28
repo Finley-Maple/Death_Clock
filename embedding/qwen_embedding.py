@@ -56,30 +56,57 @@ import importlib
 import types
 
 def _patch_broken_torchvision():
-    """If torchvision is broken, inject a minimal stub so transformers skips it."""
+    """If torchvision is broken, inject a minimal stub so transformers skips it.
+
+    Two failure modes handled:
+      1. torchvision not installed (ImportError)
+      2. torchvision installed but incompatible with torch (RuntimeError/OSError) —
+         common on shared servers where conda torchvision + pip torch versions clash.
+
+    transformers 5.x needs: torchvision.transforms.InterpolationMode
+                            torchvision.io.ImageReadMode, decode_image
+    Both are stubbed out since we never do image work here.
+    """
+    broken = False
     try:
         import torchvision  # noqa: F401
+        import torchvision.io  # noqa: F401  — verify submodule works too
     except (ImportError, RuntimeError, OSError):
-        # Create a minimal stub that satisfies the import chain
-        stub = types.ModuleType("torchvision")
-        stub.__version__ = "0.0.0"
-        stub.__path__ = []
-        # Some code (e.g. transformers/sentence-transformers) checks __spec__; avoid "torchvision.__spec__ is None"
-        try:
-            stub.__spec__ = importlib.machinery.ModuleSpec("torchvision", None, origin="stub")
-        except Exception:
-            stub.__spec__ = types.SimpleNamespace(origin="stub")
-        sys.modules["torchvision"] = stub
+        broken = True
 
-        transforms_stub = types.ModuleType("torchvision.transforms")
-        transforms_stub.InterpolationMode = type("InterpolationMode", (), {
-            "BILINEAR": 2, "BICUBIC": 3, "NEAREST": 0, "LANCZOS": 1,
-        })
+    if not broken:
+        return
+
+    # Remove any partially-loaded torchvision submodules from sys.modules
+    for key in list(sys.modules.keys()):
+        if key == "torchvision" or key.startswith("torchvision."):
+            del sys.modules[key]
+
+    def _make_stub(name):
+        m = types.ModuleType(name)
+        m.__path__ = []
         try:
-            transforms_stub.__spec__ = importlib.machinery.ModuleSpec("torchvision.transforms", None, origin="stub")
+            m.__spec__ = importlib.machinery.ModuleSpec(name, None, origin="stub")
         except Exception:
-            transforms_stub.__spec__ = types.SimpleNamespace(origin="stub")
-        sys.modules["torchvision.transforms"] = transforms_stub
+            m.__spec__ = types.SimpleNamespace(origin="stub")
+        sys.modules[name] = m
+        return m
+
+    stub = _make_stub("torchvision")
+    stub.__version__ = "0.0.0"
+
+    # torchvision.transforms — InterpolationMode used by transformers image utils
+    transforms_stub = _make_stub("torchvision.transforms")
+    transforms_stub.InterpolationMode = type("InterpolationMode", (), {
+        "BILINEAR": 2, "BICUBIC": 3, "NEAREST": 0, "LANCZOS": 1,
+    })
+    stub.transforms = transforms_stub
+
+    # torchvision.io — ImageReadMode / decode_image used by transformers image_utils.py
+    io_stub = _make_stub("torchvision.io")
+    io_stub.ImageReadMode = type("ImageReadMode", (), {"RGB": 3, "GRAY": 1, "UNCHANGED": 0})
+    io_stub.decode_image = lambda *a, **kw: None
+    stub.io = io_stub
 
 _patch_broken_torchvision()
 
