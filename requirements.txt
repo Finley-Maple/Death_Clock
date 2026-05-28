@@ -63,3 +63,5 @@ statsmodels>=0.14.0
 # umap-learn                      # UMAP visualisation
 # flash-attn>=2.5.0               # Flash Attention 2 (Linux + CUDA only)
 # openpyxl                        # Reading .xlsx files (preprocessing/variables.xlsx)
+# httpx[socks]                    # Required on servers behind a SOCKS proxy (e.g. featurize)
+#                                 # to allow huggingface_hub to download models
