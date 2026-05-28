@@ -481,7 +481,7 @@ class PatientEmbeddingProcessor:
     def load(output_dir: Path, tag: str = "patient") -> Dict[int, np.ndarray]:
         """Load previously saved embeddings."""
         npz_path = output_dir / f"{tag}_embeddings.npz"
-        data = np.load(npz_path)
+        data = np.load(npz_path, allow_pickle=False)
         return {int(k): data[k] for k in data.files}
 
 

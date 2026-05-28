@@ -89,6 +89,17 @@ README_files/
 README.html
 
 # ==========================
+# UKB participant data (never commit)
+# ==========================
+evaluation/cohort_split.json
+evaluation/test3k/
+
+# ==========================
+# Claude Code session data
+# ==========================
+.claude/
+
+# ==========================
 # Misc
 # ==========================
 .pytest_cache/
