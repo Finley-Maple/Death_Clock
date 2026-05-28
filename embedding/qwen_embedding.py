@@ -239,23 +239,19 @@ class QwenEmbeddingExtractor:
 
         logger.info(f"Loading {self.config.model_name} on {self.config.device}...")
 
-        # Try transformers (AutoModel) first; fall back to sentence-transformers on config error
+        # Try transformers (AutoModel) first; fall back to sentence-transformers on any failure.
+        # Two distinct failure modes:
+        #   OSError with "can't load config"  — download / cache issue
+        #   ModuleNotFoundError / RuntimeError — model class import fails (e.g. torchvision chain
+        #                                        inside modeling_qwen3.py on mixed conda/pip envs)
         try:
             self._load_model_transformers(force_download=False)
-        except OSError as e:
-            err_msg = str(e).lower()
-            if "can't load" in err_msg and "config" in err_msg:
-                logger.warning(
-                    "Transformers failed to load config: %s", e
-                )
-                logger.warning("Retrying once with force_download=True...")
-                try:
-                    self._load_model_transformers(force_download=True)
-                except OSError as e2:
-                    logger.warning("Retry failed (%s). Trying sentence-transformers fallback...", e2)
-                    self._load_model_sentence_transformers()
-            else:
-                raise
+        except Exception as e:
+            logger.warning(
+                "transformers backend failed (%s: %s). Trying sentence-transformers fallback...",
+                type(e).__name__, e,
+            )
+            self._load_model_sentence_transformers()
         if self._st_model is None and self.model is None:
             raise RuntimeError("Failed to load embedding model.")
 
