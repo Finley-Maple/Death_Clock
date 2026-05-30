@@ -92,7 +92,10 @@ README.html
 # UKB participant data (never commit)
 # ==========================
 evaluation/cohort_split.json
+evaluation/cohort_split.json.zip
 evaluation/test3k/
+benchmarking/autoprognosis_survival_dataset.csv
+benchmarking/disease_before60_features.csv
 
 # ==========================
 # Claude Code session data
