@@ -103,6 +103,11 @@ benchmarking/disease_before60_features.csv
 .claude/
 
 # ==========================
+# UKB audit reports
+# ==========================
+ukb_audit_reports/
+
+# ==========================
 # Misc
 # ==========================
 .pytest_cache/
