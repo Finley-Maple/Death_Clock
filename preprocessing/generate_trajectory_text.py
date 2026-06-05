@@ -103,14 +103,21 @@ def build_trajectory_text(
         if pd.notna(age_val):
             age_years = float(age_val)
             if 0 <= age_years < age_cutoff:
-                # Derive a readable disease name from the column
-                # Column format: slug_name_fieldid_age
-                # Remove the trailing _fieldid_age to get the disease slug
+                # Derive a readable disease name from the column.
+                # Column format: date_{icd}_first_reported_{name}_{field_id}_age
+                # rsplit removes trailing _{field_id}_age; then strip date_ prefix
+                # and _first_reported_ infix to get e.g. "J45 Asthma".
                 parts = col.rsplit("_", 2)
-                if len(parts) >= 3:
-                    disease_name = parts[0].replace("_", " ").title()
+                slug = parts[0] if len(parts) >= 3 else col
+                if slug.startswith("date_"):
+                    slug = slug[5:]
+                if "_first_reported_" in slug:
+                    icd_part, name_part = slug.split("_first_reported_", 1)
+                    icd = icd_part.replace("_", " ").upper()
+                    name = name_part.replace("_", " ").title()
+                    disease_name = f"{icd} {name}".strip()
                 else:
-                    disease_name = col.replace("_", " ").title()
+                    disease_name = slug.replace("_", " ").title()
                 events.append((age_years, disease_name))
 
     # Sort events by age

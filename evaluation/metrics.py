@@ -25,8 +25,11 @@ except Exception:  # pragma: no cover - lifelines optional
     LIFELINES_AVAILABLE = False
 
 try:
-    from sksurv.metrics import cumulative_dynamic_auc, integrated_brier_score
-
+    from sksurv.metrics import (
+        cumulative_dynamic_auc,
+        concordance_index_ipcw,
+        integrated_brier_score,
+    )
     SKSURV_AVAILABLE = True
 except Exception:  # pragma: no cover - sksurv optional
     SKSURV_AVAILABLE = False
@@ -40,12 +43,21 @@ def to_structured(durations: np.ndarray, events: np.ndarray) -> np.ndarray:
     )
 
 
-def derive_time_horizons(durations: np.ndarray, quantiles: Sequence[float] = (0.25, 0.5, 0.75)) -> List[float]:
-    """Derive evaluation horizons from training durations."""
+def derive_time_horizons(
+    durations: np.ndarray,
+    quantiles: Sequence[float] = (0.25, 0.5, 0.75),
+    cap_quantile: float = 0.80,
+) -> List[float]:
+    """Derive evaluation horizons from training durations.
+
+    Horizons are capped at the *cap_quantile* of training durations so that
+    the longest horizon stays within a range with enough at-risk patients.
+    """
     if len(durations) == 0:
         return []
+    cap = float(np.quantile(durations, cap_quantile))
     qs = np.quantile(durations, quantiles)
-    horizons = sorted({int(q) for q in qs if q > 0})
+    horizons = sorted({int(q) for q in qs if 0 < q <= cap})
     return horizons
 
 
@@ -69,6 +81,7 @@ def compute_metrics(
     """
     result = {
         "c_index": None,
+        "c_index_ipcw": None,
         "td_auc": None,
         "mean_td_auc": None,
         "ibs": None,
@@ -82,10 +95,29 @@ def compute_metrics(
 
     durations = eval_structured["duration"]
     events = eval_structured["event"].astype(int)
+
+    # Harrell C-index (lifelines) — kept for backward compatibility.
     result["c_index"] = float(concordance_index(durations, -risk_scores, events))
 
+    # IPCW C-index (sksurv) — preferred under heavy censoring.
+    if SKSURV_AVAILABLE:
+        try:
+            tau = float(min(durations.max(), train_structured["duration"].max()))
+            _, ipcw_c = concordance_index_ipcw(train_structured, eval_structured, risk_scores, tau=tau)
+            result["c_index_ipcw"] = float(ipcw_c)
+        except Exception as exc:
+            logger.warning("IPCW C-index computation failed: %s", exc)
+
     if SKSURV_AVAILABLE and horizons:
-        valid_horizons = [h for h in horizons if h < durations.max()]
+        train_max = float(train_structured["duration"].max())
+        eval_max = float(durations.max())
+        valid_horizons = [h for h in horizons if h < min(train_max, eval_max)]
+        dropped = len(horizons) - len(valid_horizons)
+        if dropped:
+            logger.warning(
+                "Dropped %d/%d horizons exceeding min(train_max=%.0f, eval_max=%.0f) days",
+                dropped, len(horizons), train_max, eval_max,
+            )
         if valid_horizons:
             aucs, mean_auc = cumulative_dynamic_auc(
                 train_structured, eval_structured, risk_scores, valid_horizons

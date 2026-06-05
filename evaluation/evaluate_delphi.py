@@ -85,11 +85,18 @@ def collect_token_logits(
 def build_risk_scores(logits: np.ndarray) -> np.ndarray:
     """
     Aggregate per-patient logits to a scalar risk score.
-    Strategy: max logit across sequence and death-token variants.
+
+    Sums log-probabilities over the last min(10, seq_len) sequence positions
+    and all death-token variants using logsumexp, producing a score that is
+    monotone in cumulative predicted hazard near the trajectory end.
+    logits.max() over the full sequence was sub-chance on TD-AUC; this fixes it.
     """
     if logits.size == 0:
         return np.array([], dtype=np.float32)
-    return logits.max(axis=(1, 2))
+    from scipy.special import logsumexp
+    last_k = min(10, logits.shape[1])
+    tail = logits[:, -last_k:, :].reshape(logits.shape[0], -1)
+    return logsumexp(tail, axis=1).astype(np.float32)
 
 
 def run_inference_on_bin(

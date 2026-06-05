@@ -60,6 +60,11 @@ class CoxConfig:
     # PCA before CoxPH: reduces high-dim embeddings to tractable size.
     # None = no PCA (fine for ≤~200 features). Set to 64 for 1024+ dim embeddings.
     pca_components: Optional[int] = None
+    # Width of the embedding block in the combined [emb | baseline] matrix.
+    # When set, PCA is applied only to X[:, :emb_block_width] and the remaining
+    # (standardized) baseline columns are appended raw after PCA.
+    # When None (legacy), PCA is applied to the whole matrix.
+    emb_block_width: Optional[int] = None
 
 
 def load_survival_matrices(
@@ -96,7 +101,7 @@ def load_survival_matrices(
 
         if baseline_cols:
             feature_matrix = split_df[baseline_cols].to_numpy(dtype=np.float32)
-            feature_matrix = np.nan_to_num(feature_matrix, nan=0.0)
+            # NaN preserved here — imputed below using train medians
         else:
             feature_matrix = np.zeros((len(split_df), 0), dtype=np.float32)
 
@@ -107,7 +112,43 @@ def load_survival_matrices(
             split_df["eid"].astype(int).tolist(),
         )
 
+    # Median imputation: fit on train, apply to all splits, add missing indicators.
+    if "train" in matrices and matrices["train"].X.shape[1] > 0:
+        matrices = _median_impute(matrices)
+
     return matrices, baseline_cols, coverage
+
+
+def _median_impute(
+    matrices: Dict[str, FeatureMatrix],
+    missing_threshold: float = 0.01,
+) -> Dict[str, FeatureMatrix]:
+    """Impute NaN with train-set medians; add binary missing-indicator columns
+    for features whose train-set NaN rate exceeds *missing_threshold*."""
+    train_X = matrices["train"].X
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN slice is handled below
+        train_medians = np.nanmedian(train_X, axis=0)
+    # Guard against all-NaN columns (replace remaining NaN with 0 after median)
+    train_medians = np.where(np.isnan(train_medians), 0.0, train_medians)
+    nan_frac = np.isnan(train_X).mean(axis=0)
+    has_missing_indicator = nan_frac > missing_threshold
+
+    def _impute(mat: FeatureMatrix) -> FeatureMatrix:
+        X = mat.X.copy()
+        nan_mask = np.isnan(X)
+        X = np.where(nan_mask, train_medians, X)
+        if has_missing_indicator.any():
+            indicators = nan_mask[:, has_missing_indicator].astype(np.float32)
+            X = np.concatenate([X, indicators], axis=1)
+        return FeatureMatrix(X.astype(np.float32), mat.durations, mat.events, mat.eids)
+
+    n_indicators = int(has_missing_indicator.sum())
+    if n_indicators:
+        print(f"[_median_impute] Added {n_indicators} missing-indicator columns "
+              f"(train NaN rate > {missing_threshold:.0%})")
+    return {k: _impute(v) for k, v in matrices.items()}
 
 
 def merge_with_embeddings(
@@ -240,19 +281,47 @@ def run_cox_evaluation(
 
     train_matrix_std, other_splits_std, stats = standardize_features(train_matrix, other_splits)
 
-    # PCA dimensionality reduction (fit on train, apply to all splits)
+    # PCA dimensionality reduction (fit on train, apply to all splits).
+    # When emb_block_width is set, PCA is applied only to the embedding block
+    # X[:, :emb_block_width]; baseline columns X[:, emb_block_width:] are kept raw.
     pca = None
     if cox_config.pca_components is not None and train_matrix_std.X.shape[1] > cox_config.pca_components:
         from sklearn.decomposition import PCA
-        n_components = min(cox_config.pca_components, train_matrix_std.X.shape[0], train_matrix_std.X.shape[1])
-        pca = PCA(n_components=n_components, random_state=42)
-        print(f"[run_cox_evaluation] PCA: {train_matrix_std.X.shape[1]} → {n_components} dims")
-        train_X_pca = pca.fit_transform(train_matrix_std.X)
-        train_matrix_std = FeatureMatrix(train_X_pca.astype(np.float32), train_matrix_std.durations, train_matrix_std.events, train_matrix_std.eids)
-        other_splits_std = {
-            k: FeatureMatrix(pca.transform(v.X).astype(np.float32), v.durations, v.events, v.eids)
-            for k, v in other_splits_std.items()
-        }
+        emb_w = cox_config.emb_block_width
+        n_total = train_matrix_std.X.shape[1]
+
+        if emb_w is not None and 0 < emb_w < n_total:
+            # Split-PCA: compress only the embedding block, keep baseline intact.
+            n_components = min(cox_config.pca_components, emb_w, train_matrix_std.X.shape[0])
+            pca = PCA(n_components=n_components, random_state=42)
+            print(f"[run_cox_evaluation] PCA: emb {emb_w} → {n_components} dims "
+                  f"(+{n_total - emb_w} baseline dims kept raw)")
+
+            def _apply_pca(matrix: FeatureMatrix) -> FeatureMatrix:
+                emb_pca = pca.transform(matrix.X[:, :emb_w])
+                base = matrix.X[:, emb_w:]
+                return FeatureMatrix(
+                    np.concatenate([emb_pca, base], axis=1).astype(np.float32),
+                    matrix.durations, matrix.events, matrix.eids,
+                )
+
+            train_emb_pca = pca.fit_transform(train_matrix_std.X[:, :emb_w])
+            train_matrix_std = FeatureMatrix(
+                np.concatenate([train_emb_pca, train_matrix_std.X[:, emb_w:]], axis=1).astype(np.float32),
+                train_matrix_std.durations, train_matrix_std.events, train_matrix_std.eids,
+            )
+            other_splits_std = {k: _apply_pca(v) for k, v in other_splits_std.items()}
+        else:
+            # Legacy: PCA on the whole matrix (used when there are no baseline cols).
+            n_components = min(cox_config.pca_components, n_total, train_matrix_std.X.shape[0])
+            pca = PCA(n_components=n_components, random_state=42)
+            print(f"[run_cox_evaluation] PCA: {n_total} → {n_components} dims")
+            train_X_pca = pca.fit_transform(train_matrix_std.X)
+            train_matrix_std = FeatureMatrix(train_X_pca.astype(np.float32), train_matrix_std.durations, train_matrix_std.events, train_matrix_std.eids)
+            other_splits_std = {
+                k: FeatureMatrix(pca.transform(v.X).astype(np.float32), v.durations, v.events, v.eids)
+                for k, v in other_splits_std.items()
+            }
 
     col_names = [f"f{i}" for i in range(train_matrix_std.X.shape[1])]
 

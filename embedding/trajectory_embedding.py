@@ -122,13 +122,9 @@ class TokenEmbedder:
             if self.qwen_extractor is None:
                 raise RuntimeError("Qwen extractor not provided for mode='qwen'")
             emb = self.qwen_extractor.extract_embedding(token)
-            # Project to token_dim if needed
-            if emb.shape[0] != self.token_dim:
-                # Simple truncation or zero-padding
-                result = np.zeros(self.token_dim, dtype=np.float32)
-                n = min(self.token_dim, emb.shape[0])
-                result[:n] = emb[:n]
-                emb = result
+            # Use full Qwen embedding; update token_dim to match on first call
+            if self.token_dim != emb.shape[0]:
+                self.token_dim = emb.shape[0]
         elif self.mode == "random":
             rng = np.random.RandomState(hash(token) % (2 ** 31))
             emb = rng.randn(self.token_dim).astype(np.float32) * 0.02
@@ -197,18 +193,22 @@ class TrajectoryEmbeddingPipeline:
             cache_path=cache_path, qwen_extractor=qwen_extractor,
         )
         self.pooling = pooling
-        self.output_dim = age_dim + token_dim
+        self.output_dim = age_dim + token_dim  # updated lazily on first Qwen call
+
+    @property
+    def _output_dim(self) -> int:
+        return self.age_encoder.n_embd + self.token_embedder.token_dim
 
     def embed_patient(self, trajectory_text: str) -> np.ndarray:
         """
         Embed a single patient's trajectory.
 
-        Returns a 1-D vector of shape (age_dim + token_dim,).
+        Returns a 1-D vector of shape (age_dim + actual_token_dim,).
         """
         events = parse_trajectory(trajectory_text)
 
         if not events:
-            return np.zeros(self.output_dim, dtype=np.float32)
+            return np.zeros(self._output_dim, dtype=np.float32)
 
         # Skip "No event" tokens for the embedding (they carry no disease info)
         informative = [(age, tok) for age, tok in events if tok != "No event"]
@@ -334,11 +334,9 @@ def main():
     qwen_extractor = None
     if args.token_mode == "qwen":
         from qwen_embedding import QwenEmbeddingExtractor, EmbeddingConfig
-        # Use the smallest model for per-token embedding (each token is a short string)
         qwen_config = EmbeddingConfig(
             model_name="Qwen/Qwen3-Embedding-0.6B",
-            embedding_dim=args.token_dim,  # MRL: truncate to token_dim
-            normalize=False,               # We'll normalize later in the pipeline
+            normalize=True,  # L2-normalize token embeddings before mean-pooling
         )
         qwen_extractor = QwenEmbeddingExtractor(qwen_config)
 

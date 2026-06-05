@@ -80,12 +80,18 @@ def evaluate_embeddings(args):
     for split, cov in emb_cov.items():
         print(f"  {split}: {cov}")
 
+    # emb_block_width: embedding dims come first in the combined [emb | baseline]
+    # matrix. Pass this so PCA is applied only to the embedding block.
+    sample_emb = next(iter(embeddings.values()))
+    emb_block_width = int(np.asarray(sample_emb).ravel().shape[0]) if args.baseline_mode != "none" else None
+
     cox_cfg = survival_eval.CoxConfig(
         penalizer=args.penalizer,
         l1_ratio=args.l1_ratio,
         fallback_penalizer=args.fallback_penalizer,
         fallback_l1_ratio=args.fallback_l1_ratio,
         pca_components=args.pca_components,
+        emb_block_width=emb_block_width,
     )
 
     preds_dir = Path(args.preds_dir) if args.save_preds else None
