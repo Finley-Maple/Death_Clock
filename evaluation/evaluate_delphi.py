@@ -120,7 +120,9 @@ def build_survival_curve(
     """
     n_patients, seq_len, _ = logits.shape
     n_horizons = len(horizons_days)
-    horizons_years = np.array(horizons_days, dtype=np.float64) / 365.25
+    if n_horizons == 0:
+        return np.ones((n_patients, 0), dtype=np.float32), np.zeros(n_patients, dtype=np.float32)
+    horizons_years = np.sort(np.array(horizons_days, dtype=np.float64) / 365.25)
     survival_probs = np.ones((n_patients, n_horizons), dtype=np.float32)
 
     for i in range(n_patients):
