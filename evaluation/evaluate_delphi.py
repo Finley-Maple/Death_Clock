@@ -99,6 +99,62 @@ def build_risk_scores(logits: np.ndarray) -> np.ndarray:
     return logsumexp(tail, axis=1).astype(np.float32)
 
 
+def build_survival_curve(
+    logits: np.ndarray,
+    ages: np.ndarray,
+    horizons_days: Sequence[int],
+    age_60: float = 60.0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convert per-position death-token logits to a survival curve.
+
+    Args:
+        logits:        (n_patients, seq_len, n_death_tokens)
+        ages:          (n_patients, seq_len) — age at each position in YEARS
+        horizons_days: evaluation horizons in days-since-60th-birthday
+        age_60:        landmark age in the same units as `ages` (default: 60.0 years)
+
+    Returns:
+        survival_probs: (n_patients, n_horizons) — S(t) ∈ (0, 1]
+        risk_scores:    (n_patients,)            — 1 - S(max_horizon), for C-index
+    """
+    n_patients, seq_len, _ = logits.shape
+    n_horizons = len(horizons_days)
+    horizons_years = np.array(horizons_days, dtype=np.float64) / 365.25
+    survival_probs = np.ones((n_patients, n_horizons), dtype=np.float32)
+
+    for i in range(n_patients):
+        patient_ages = ages[i].astype(np.float64)  # (seq_len,)
+        # Mean across death-token variants → sigmoid → per-step hazard
+        mean_logit = logits[i].mean(axis=-1).astype(np.float64)  # (seq_len,)
+        hazard = 1.0 / (1.0 + np.exp(-mean_logit))
+
+        # Only post-60 positions contribute to the survival curve
+        post60 = patient_ages >= age_60
+        post60_ages_yrs = patient_ages[post60] - age_60  # years since 60
+        post60_hazards = hazard[post60]
+
+        if post60_ages_yrs.size == 0:
+            # No post-60 events: survival stays 1.0, risk = 0.0
+            continue
+
+        order = np.argsort(post60_ages_yrs)
+        sorted_ages = post60_ages_yrs[order]
+        sorted_hazards = post60_hazards[order]
+
+        S = 1.0
+        h_idx = 0
+        for hz_idx, hz_yrs in enumerate(horizons_years):
+            # Accumulate hazard for all events before this horizon
+            while h_idx < len(sorted_ages) and sorted_ages[h_idx] <= hz_yrs:
+                S *= (1.0 - sorted_hazards[h_idx])
+                h_idx += 1
+            survival_probs[i, hz_idx] = float(np.clip(S, 1e-8, 1.0))
+
+    risk_scores = (1.0 - survival_probs[:, -1]).astype(np.float32)
+    return survival_probs, risk_scores
+
+
 def run_inference_on_bin(
     model: Delphi,
     bin_path: Path,
