@@ -355,6 +355,7 @@ def evaluate_delphi(args):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     all_results = {}
+    horizons = []  # populated on first split that has a bin file
     age_60 = None  # detected on first split
 
     for split in splits_to_run:
