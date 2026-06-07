@@ -106,6 +106,15 @@ def load_embedding_results(method_name: str) -> Optional[Dict]:
         return json.load(f)
 
 
+def _load_fusion_results() -> Optional[Dict]:
+    results_path = PROJECT_ROOT / "evaluation" / "fusion_results" / "fusion_results.json"
+    if not results_path.exists():
+        print(f"  [Fusion] Results not found. Run: python evaluation/evaluate_fusion.py")
+        return None
+    with open(results_path) as f:
+        return json.load(f)
+
+
 # ---------------------------------------------------------------------------
 # Build comparison table
 # ---------------------------------------------------------------------------
@@ -139,6 +148,14 @@ def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFra
                 "test_auc_delong": None,
                 "test_auc_ci": None,
             }
+            # Try to load val metrics from a separate val results file
+            val_path = DELPHI_RESULTS / "delphi_val_results.json"
+            if val_path.exists():
+                with open(val_path) as _f:
+                    _val_data = json.load(_f)
+                _val_metrics = extract_split_metrics(_val_data, "val")
+                row["val_c_index"] = _val_metrics.get("c_index")
+                row["val_mean_td_auc"] = _val_metrics.get("mean_td_auc")
         else:
             legacy = delphi.get("legacy_delong", {})
             results_list = legacy.get("results", [])
@@ -230,6 +247,38 @@ def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFra
             "test_auc_ci": None,
         })
 
+    # Biomarker text embedding (no structured baseline)
+    biomarker = all_results.get("biomarker_text")
+    if biomarker:
+        b_test = extract_split_metrics(biomarker, "test")
+        b_val  = extract_split_metrics(biomarker, "val")
+        rows.append({
+            "method": "Biomarker Text + CoxPH (emb only)",
+            "test_c_index": b_test.get("c_index"),
+            "test_mean_td_auc": b_test.get("mean_td_auc"),
+            "test_ibs": b_test.get("ibs"),
+            "val_c_index": b_val.get("c_index"),
+            "val_mean_td_auc": b_val.get("mean_td_auc"),
+            "notes": str(biomarker.get("metadata", {}).get("embedding_dir", "")),
+            "test_auc_delong": None, "test_auc_ci": None,
+        })
+
+    # Fusion
+    fusion = all_results.get("fusion")
+    if fusion:
+        f_test = extract_split_metrics(fusion, "test")
+        f_val  = extract_split_metrics(fusion, "val")
+        rows.append({
+            "method": "Fusion (text+traj emb + baseline)",
+            "test_c_index": f_test.get("c_index"),
+            "test_mean_td_auc": f_test.get("mean_td_auc"),
+            "test_ibs": f_test.get("ibs"),
+            "val_c_index": f_val.get("c_index"),
+            "val_mean_td_auc": f_val.get("mean_td_auc"),
+            "notes": str(fusion.get("metadata", {}).get("emb_block_width", "")),
+            "test_auc_delong": None, "test_auc_ci": None,
+        })
+
     return pd.DataFrame(rows)
 
 
@@ -306,6 +355,8 @@ def print_horizon_details(all_results: Dict[str, Optional[Dict]]):
         ("Benchmarking", "benchmarking"),
         ("Text Embedding", "text_embedding"),
         ("Trajectory Embedding", "trajectory_embedding"),
+        ("Biomarker Text", "biomarker_text"),
+        ("Fusion (text+traj+baseline)", "fusion"),
     ]:
         results = all_results.get(key)
         if not results:
@@ -347,6 +398,8 @@ def run_unified_evaluation() -> pd.DataFrame:
         "benchmarking": load_benchmarking_results(),
         "text_embedding": load_embedding_results("text_embedding"),
         "trajectory_embedding": load_embedding_results("trajectory_embedding"),
+        "biomarker_text": load_embedding_results("biomarker_text"),
+        "fusion": _load_fusion_results(),
     }
 
     df = build_comparison_table(all_results)
