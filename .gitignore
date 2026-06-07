@@ -116,4 +116,5 @@ ukb_audit_reports/
 # ==========================
 # Documentation
 # ==========================
-docs/
+docs/*.html
+docs/README_files/
