@@ -754,6 +754,152 @@ class DiseaseBefore60TextConverter:
         return df
 
 
+# ---------------------------------------------------------------------------
+# Biomarker + disease text converter (Method 4 input)
+# ---------------------------------------------------------------------------
+
+class BiomarkerBefore60TextConverter:
+    """
+    Generates text combining structured biomarkers + disease history before 60.
+    Used as input to Qwen3-Embedding-8B with --baseline-mode none (no structured
+    baseline added separately — the embedding is tested standalone).
+
+    Reads from:
+      - autoprognosis_survival_dataset.csv  (biomarkers + demographics)
+      - disease_trajectory.csv             (age-at-diagnosis per disease)
+    """
+
+    LAB_FIELDS = [
+        ("hba1c", "HbA1c", "mmol/mol"),
+        ("hdl_cholesterol", "HDL cholesterol", "mmol/L"),
+        ("total_cholesterol", "total cholesterol", "mmol/L"),
+        ("triglycerides", "triglycerides", "mmol/L"),
+        ("c_reactive_protein", "C-reactive protein", "mg/L"),
+        ("glucose", "glucose", "mmol/L"),
+        ("albumin", "albumin", "g/L"),
+        ("total_protein", "total protein", "g/L"),
+        ("creatinine", "creatinine", "µmol/L"),
+        ("urea", "urea", "mmol/L"),
+        ("bilirubin", "bilirubin", "µmol/L"),
+        ("alt", "ALT", "U/L"),
+        ("haemoglobin", "haemoglobin", "g/L"),
+        ("mcv", "MCV", "fL"),
+        ("alkaline_phosphatase", "alkaline phosphatase", "U/L"),
+        ("apolipoprotein_a", "apolipoprotein A", "g/L"),
+        ("apolipoprotein_b", "apolipoprotein B", "g/L"),
+        ("cystatin_c", "cystatin C", "mg/L"),
+        ("igf1", "IGF-1", "nmol/L"),
+        ("lipoprotein_a", "lipoprotein(a)", "nmol/L"),
+        ("systolic_variation", "systolic BP variation", "mmHg"),
+    ]
+
+    COMORBIDITY_FIELDS = [
+        ("diabetes_t1", "type 1 diabetes"),
+        ("diabetes_t2", "type 2 diabetes"),
+        ("ckd", "chronic kidney disease"),
+        ("migraine", "migraine"),
+        ("mental_illness", "mental illness"),
+        ("depression", "depression"),
+        ("stroke", "stroke"),
+        ("cholesterol_disorder", "cholesterol disorder"),
+    ]
+
+    def __init__(
+        self,
+        survival_csv: Path = None,
+        trajectory_csv: Path = None,
+    ):
+        _default_survival = (
+            PROJECT_ROOT / "benchmarking" / "autoprognosis_survival_dataset.csv"
+        )
+        _default_traj = (
+            PROJECT_ROOT / "data" / "preprocessed" / "disease_trajectory.csv"
+        )
+        self.survival_csv = survival_csv or _default_survival
+        self.trajectory_csv = trajectory_csv or _default_traj
+
+    def _format_biomarker_text(self, row: pd.Series, disease_text: str) -> str:
+        """Combine demographics + labs + disease history into a single string."""
+        parts = []
+
+        # --- Demographics ---
+        sex_str = "male" if int(row.get("sex", 0)) == 1 else "female"
+        demo_parts = [f"Patient is {sex_str}"]
+        bmi = row.get("bmi")
+        if pd.notna(bmi):
+            demo_parts.append(f"BMI {float(bmi):.1f} kg/m²")
+        smoking = row.get("smoking_status")
+        if pd.notna(smoking):
+            s = int(smoking)
+            demo_parts.append(
+                "current smoker" if s == 2 else "ex-smoker" if s == 1 else "non-smoker"
+            )
+        alcohol = row.get("alcohol_status")
+        if pd.notna(alcohol):
+            a = int(alcohol)
+            demo_parts.append(
+                "drinks alcohol daily" if a >= 5
+                else "drinks alcohol occasionally" if a >= 2
+                else "does not drink alcohol"
+            )
+        if pd.notna(row.get("living_alone")) and int(row.get("living_alone", 0)) == 1:
+            demo_parts.append("lives alone")
+        parts.append("Demographics: " + ", ".join(demo_parts) + ".")
+
+        # --- Pre-existing comorbidities ---
+        comorbs = [
+            label for col, label in self.COMORBIDITY_FIELDS
+            if pd.notna(row.get(col)) and int(row.get(col, 0)) == 1
+        ]
+        if comorbs:
+            parts.append(
+                "Pre-existing conditions before age 60: " + ", ".join(comorbs) + "."
+            )
+
+        # --- Lab results ---
+        lab_parts = []
+        for col, name, unit in self.LAB_FIELDS:
+            val = row.get(col)
+            if pd.notna(val):
+                lab_parts.append(f"{name} {float(val):.2f} {unit}")
+        if lab_parts:
+            parts.append("Lab results (approximately age 60): " + ", ".join(lab_parts) + ".")
+
+        # --- Disease history ---
+        parts.append("Disease history before age 60: " + disease_text)
+
+        return "\n".join(parts)
+
+    def generate_texts(
+        self,
+        eids: Optional[List[int]] = None,
+        output_csv: Optional[Path] = None,
+    ) -> pd.DataFrame:
+        """Generate one text per eid; return DataFrame with columns [eid, text]."""
+        surv_df = pd.read_csv(self.survival_csv)
+        surv_df["eid"] = surv_df["eid"].astype(int)
+        if eids is not None:
+            surv_df = surv_df[surv_df["eid"].isin(set(eids))]
+
+        disease_conv = DiseaseBefore60TextConverter(trajectory_csv=self.trajectory_csv)
+        disease_df = disease_conv.generate_texts(eids=surv_df["eid"].tolist())
+        disease_map = dict(zip(disease_df["eid"], disease_df["text"]))
+
+        records = []
+        for _, row in surv_df.iterrows():
+            eid = int(row["eid"])
+            disease_text = disease_map.get(eid, "No diseases diagnosed before age 60.")
+            text = self._format_biomarker_text(row, disease_text)
+            records.append({"eid": eid, "text": text})
+
+        df = pd.DataFrame(records)
+        if output_csv is not None:
+            output_csv.parent.mkdir(parents=True, exist_ok=True)
+            df.to_csv(output_csv, index=False)
+            print(f"Wrote {len(df)} biomarker texts to {output_csv}")
+        return df
+
+
 def main_before60():
     """CLI entry point for generating disease-before-60 texts."""
     parser = argparse.ArgumentParser(
@@ -797,6 +943,43 @@ def main_before60():
         trajectory_csv=args.trajectory_csv,
     )
     converter.generate_texts(eids=eids, output_dir=args.output_dir, output_csv=args.output_csv)
+
+
+def main_biomarker():
+    """CLI entry point for generating biomarker-augmented texts."""
+    parser = argparse.ArgumentParser(
+        description="Generate biomarker-augmented text per patient for embedding."
+    )
+    parser.add_argument(
+        "--survival-csv", type=Path,
+        default=PROJECT_ROOT / "benchmarking" / "autoprognosis_survival_dataset.csv",
+    )
+    parser.add_argument(
+        "--trajectory-csv", type=Path,
+        default=PROJECT_ROOT / "data" / "preprocessed" / "disease_trajectory.csv",
+    )
+    parser.add_argument(
+        "--cohort-json", type=Path,
+        default=PROJECT_ROOT / "evaluation" / "cohort_split.json",
+    )
+    parser.add_argument(
+        "--output-csv", type=Path,
+        default=PROJECT_ROOT / "data" / "preprocessed" / "biomarker_text_before60.csv",
+    )
+    args = parser.parse_args()
+
+    eids = None
+    if args.cohort_json.exists():
+        with open(args.cohort_json) as f:
+            cohort = json.load(f)
+        eids = cohort["train_eids"] + cohort["val_eids"] + cohort["test_eids"]
+        print(f"Loaded {len(eids)} eids from cohort split.")
+
+    conv = BiomarkerBefore60TextConverter(
+        survival_csv=args.survival_csv,
+        trajectory_csv=args.trajectory_csv,
+    )
+    conv.generate_texts(eids=eids, output_csv=args.output_csv)
 
 
 if __name__ == "__main__":
