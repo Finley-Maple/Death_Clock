@@ -70,10 +70,14 @@ def collect_token_logits(
     splits = [torch.split(tensor, batch_size) for tensor in [x, a]]
     logits_list = []
     ages_list = []
+    vocab_size = model.transformer.wte.weight.shape[0]
     with torch.no_grad():
         for mini_x, mini_a in zip(*splits):
             mini_x = mini_x.to(device)
             mini_a = mini_a.to(device)
+            # Clamp token IDs to valid embedding range. Death token (label_idx 1269)
+            # becomes 1270 after get_batch's +1 shift, exceeding vocab_size=1270.
+            mini_x = mini_x.clamp(0, vocab_size - 1)
             outputs = model(mini_x, mini_a)[0].detach().cpu().numpy()
             logits_list.append(outputs[:, :, token_indices])
             ages_list.append(mini_a.cpu().numpy())
@@ -385,6 +389,14 @@ def evaluate_delphi(args):
         if age_60 is None:
             age_60 = _detect_age_unit(age_array)
 
+        # build_survival_curve expects ages in years; convert from days if needed
+        if age_60 > 100:
+            age_array_years = age_array / 365.25
+            age_60_years = 60.0
+        else:
+            age_array_years = age_array
+            age_60_years = age_60
+
         horizons = list(args.horizons_days) if args.horizons_days else []
         if not horizons:
             horizons = metrics.derive_time_horizons(
@@ -393,7 +405,7 @@ def evaluate_delphi(args):
         horizons = sorted({int(h) for h in horizons if h > 0})
 
         survival_probs, risk_scores = build_survival_curve(
-            death_logits, age_array, horizons, age_60=age_60
+            death_logits, age_array_years, horizons, age_60=age_60_years
         )
         risk_map = dict(zip(patient_eids.tolist(), risk_scores.tolist()))
         surv_map = dict(zip(patient_eids.tolist(), survival_probs.tolist()))
