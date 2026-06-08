@@ -121,15 +121,15 @@ def encode_demographics(surv_df: pd.DataFrame, label_map: dict):
         if female_mask.sum() > 0 and "Female" in label_map:
             recs = np.column_stack([
                 sex_data.loc[female_mask, "eid"].values,
-                np.zeros(female_mask.sum(), dtype=int),
                 np.full(female_mask.sum(), label_map["Female"], dtype=int),
+                np.zeros(female_mask.sum(), dtype=int),
             ])
             records.append(recs)
         if male_mask.sum() > 0 and "Male" in label_map:
             recs = np.column_stack([
                 sex_data.loc[male_mask, "eid"].values,
-                np.zeros(male_mask.sum(), dtype=int),
                 np.full(male_mask.sum(), label_map["Male"], dtype=int),
+                np.zeros(male_mask.sum(), dtype=int),
             ])
             records.append(recs)
 
@@ -145,8 +145,8 @@ def encode_demographics(surv_df: pd.DataFrame, label_map: dict):
             )
             recs = np.column_stack([
                 bmi_data["eid"].values,
-                np.zeros(len(bmi_data), dtype=int),
                 bmi_labels,
+                np.zeros(len(bmi_data), dtype=int),
             ])
             records.append(recs)
 
@@ -163,8 +163,8 @@ def encode_demographics(surv_df: pd.DataFrame, label_map: dict):
             )
             recs = np.column_stack([
                 sm_data["eid"].values,
-                np.zeros(len(sm_data), dtype=int),
                 sm_labels,
+                np.zeros(len(sm_data), dtype=int),
             ])
             records.append(recs)
 
@@ -181,8 +181,8 @@ def encode_demographics(surv_df: pd.DataFrame, label_map: dict):
             )
             recs = np.column_stack([
                 alc_data["eid"].values,
-                np.zeros(len(alc_data), dtype=int),
                 alc_labels,
+                np.zeros(len(alc_data), dtype=int),
             ])
             records.append(recs)
 
@@ -214,8 +214,8 @@ def encode_death_events(surv_df: pd.DataFrame, label_map: dict):
 
     records = np.column_stack([
         death_data["eid"].values.astype(int),
-        age_at_death_days,
         np.full(len(death_data), death_label, dtype=int),
+        age_at_death_days,
     ])
 
     return [records]
@@ -248,8 +248,8 @@ def encode_death_events_raw(raw_df: pd.DataFrame, label_map: dict):
 
     records = np.column_stack([
         death_data.loc[valid, "eid"].values.astype(int),
-        death_days[valid].astype(int),
         np.full(valid.sum(), death_label, dtype=int),
+        death_days[valid].astype(int),
     ])
 
     return [records]
@@ -313,8 +313,8 @@ def convert_to_delphi_binary(
 
         records = np.column_stack([
             patient_ids[valid],
-            age_days[valid],
             np.full(valid.sum(), label_idx, dtype=int),
+            age_days[valid],
         ])
         data_list.append(records)
         mapped_count += 1
