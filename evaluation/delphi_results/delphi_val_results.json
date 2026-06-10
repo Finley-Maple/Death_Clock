@@ -1,6 +1,6 @@
 {
   "method": "delphi",
-  "split": "test",
+  "split": "val",
   "risk_strategy": "sigmoid_hazard_chain",
   "horizons": [
     3471,
@@ -8,23 +8,23 @@
     7213
   ],
   "splits": {
-    "test": {
-      "c_index": 0.6161014918148808,
+    "val": {
+      "c_index": 0.6128298748096309,
       "c_index_ipcw": null,
       "td_auc": {
-        "3471": 0.521856807820351,
-        "5620": 0.5862232014477147,
-        "7213": 0.648831504750973
+        "3471": 0.5186467453451189,
+        "5620": 0.5778341274542569,
+        "7213": 0.6391804115856445
       },
-      "mean_td_auc": 0.5984081261217966,
-      "ibs": 0.18459555926435894,
-      "size": 18623,
-      "event_rate": 0.2619878644686678
+      "mean_td_auc": 0.5891634152420937,
+      "ibs": 0.18716174650117323,
+      "size": 18624,
+      "event_rate": 0.2619737972508591
     }
   },
   "coverage": {
-    "expected": 18623,
-    "available": 18623,
+    "expected": 18624,
+    "available": 18624,
     "coverage": 1.0,
     "missing_count": 0,
     "missing_examples": [],

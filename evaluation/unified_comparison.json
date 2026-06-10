@@ -1,35 +1,78 @@
 [
   {
-    "method":"Delphi (test)",
-    "test_c_index":0.5882362313,
-    "test_mean_td_auc":0.5317876077,
-    "test_ibs":null,
-    "val_c_index":null,
-    "val_mean_td_auc":null,
-    "notes":"Coverage: {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': [], 'missing_predictions': []}",
-    "test_auc_delong":null,
-    "test_auc_ci":null
+    "method": "Delphi (test)",
+    "test_c_index": 0.6161014918,
+    "test_mean_td_auc": 0.5984081261,
+    "test_ibs": 0.1845955593,
+    "val_c_index": 0.6128298748,
+    "val_mean_td_auc": 0.5891634152,
+    "notes": "Coverage: {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': [], 'missing_predictions': []}",
+    "test_auc_delong": null,
+    "test_auc_ci": null
   },
   {
-    "method":"Benchmarking (CoxPH)",
-    "test_c_index":0.6140897577,
-    "test_mean_td_auc":0.6168780214,
-    "test_ibs":0.1421906854,
-    "val_c_index":0.5882532692,
-    "val_mean_td_auc":0.5865347988,
-    "notes":"{'baseline_mode': 'all', 'baseline_columns': ['diabetes_t1', 'diabetes_t2', 'diabetes_any', 'ckd', 'migraine', 'systemic_lupus', 'hiv', 'mental_illness', 'cholesterol_disorder', 'depression', 'stroke', 'erectile_dysfunction', 'sex', 'age', 'smoking_status', 'alcohol_status', 'bmi', 'hdl_cholesterol', 'total_cholesterol', 'hba1c', 'alkaline_phosphatase', 'apolipoprotein_a', 'apolipoprotein_b', 'cystatin_c', 'c_reactive_protein', 'igf1', 'lipoprotein_a', 'triglycerides', 'creatinine', 'urea', 'glucose', 'albumin', 'total_protein', 'bilirubin', 'alt', 'haemoglobin', 'mcv', 'living_alone', 'systolic_variation'], 'baseline_coverage': {'train': {'expected': 7000, 'available': 7000, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}}",
-    "test_auc_delong":null,
-    "test_auc_ci":null
+    "method": "Benchmarking (CoxPH)",
+    "test_c_index": 0.619059901,
+    "test_mean_td_auc": 0.5999029211,
+    "test_ibs": 0.1409666393,
+    "val_c_index": 0.6187212353,
+    "val_mean_td_auc": 0.6014323398,
+    "notes": "{'baseline_mode': 'all', 'baseline_columns': ['diabetes_t1', 'diabetes_t2', 'diabetes_any', 'ckd', 'migraine', 'systemic_lupus', 'hiv', 'mental_illness', 'cholesterol_disorder', 'depression', 'stroke', 'erectile_dysfunction', 'sex', 'age', 'smoking_status', 'alcohol_status', 'bmi', 'hdl_cholesterol', 'total_cholesterol', 'hba1c', 'alkaline_phosphatase', 'apolipoprotein_a', 'apolipoprotein_b', 'cystatin_c', 'c_reactive_protein', 'igf1', 'lipoprotein_a', 'triglycerides', 'creatinine', 'urea', 'glucose', 'albumin', 'total_protein', 'bilirubin', 'alt', 'haemoglobin', 'mcv', 'living_alone', 'systolic_variation'], 'baseline_coverage': {'train': {'expected': 86911, 'available': 86911, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 18624, 'available': 18624, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}}",
+    "test_auc_delong": null,
+    "test_auc_ci": null
   },
   {
-    "method":"Trajectory Embedding + CoxPH",
-    "test_c_index":0.6111870509,
-    "test_mean_td_auc":0.6111713111,
-    "test_ibs":0.1419463797,
-    "val_c_index":0.5901780848,
-    "val_mean_td_auc":0.5884580967,
-    "notes":"{'embedding_dir': 'data\/preprocessed\/embeddings_traj', 'embedding_tag': 'trajectory', 'baseline_mode': 'all', 'baseline_columns': ['diabetes_t1', 'diabetes_t2', 'diabetes_any', 'ckd', 'migraine', 'systemic_lupus', 'hiv', 'mental_illness', 'cholesterol_disorder', 'depression', 'stroke', 'erectile_dysfunction', 'sex', 'age', 'smoking_status', 'alcohol_status', 'bmi', 'hdl_cholesterol', 'total_cholesterol', 'hba1c', 'alkaline_phosphatase', 'apolipoprotein_a', 'apolipoprotein_b', 'cystatin_c', 'c_reactive_protein', 'igf1', 'lipoprotein_a', 'triglycerides', 'creatinine', 'urea', 'glucose', 'albumin', 'total_protein', 'bilirubin', 'alt', 'haemoglobin', 'mcv', 'living_alone', 'systolic_variation'], 'baseline_coverage': {'train': {'expected': 7000, 'available': 7000, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}, 'embedding_coverage': {'train': {'expected': 7000, 'available': 7000, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 1500, 'available': 1500, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}}",
-    "test_auc_delong":null,
-    "test_auc_ci":null
+    "method": "Text Embedding + CoxPH",
+    "test_c_index": 0.615635363,
+    "test_mean_td_auc": 0.6073831665,
+    "test_ibs": 0.1409136833,
+    "val_c_index": 0.6149388722,
+    "val_mean_td_auc": 0.6077990518,
+    "notes": "{'embedding_dir': 'data/preprocessed/embeddings_text', 'embedding_tag': 'patient', 'baseline_mode': 'all', 'baseline_columns': ['diabetes_t1', 'diabetes_t2', 'diabetes_any', 'ckd', 'migraine', 'systemic_lupus', 'hiv', 'mental_illness', 'cholesterol_disorder', 'depression', 'stroke', 'erectile_dysfunction', 'sex', 'age', 'smoking_status', 'alcohol_status', 'bmi', 'hdl_cholesterol', 'total_cholesterol', 'hba1c', 'alkaline_phosphatase', 'apolipoprotein_a', 'apolipoprotein_b', 'cystatin_c', 'c_reactive_protein', 'igf1', 'lipoprotein_a', 'triglycerides', 'creatinine', 'urea', 'glucose', 'albumin', 'total_protein', 'bilirubin', 'alt', 'haemoglobin', 'mcv', 'living_alone', 'systolic_variation'], 'baseline_coverage': {'train': {'expected': 86911, 'available': 86911, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 18624, 'available': 18624, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}, 'embedding_coverage': {'train': {'expected': 86911, 'available': 86911, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 18624, 'available': 18624, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}}",
+    "test_auc_delong": null,
+    "test_auc_ci": null
+  },
+  {
+    "method": "Trajectory Embedding + CoxPH",
+    "test_c_index": 0.6237587588,
+    "test_mean_td_auc": 0.6000696635,
+    "test_ibs": 0.1409666415,
+    "val_c_index": 0.6228400926,
+    "val_mean_td_auc": 0.6000236919,
+    "notes": "{'embedding_dir': 'data/preprocessed/embeddings_traj', 'embedding_tag': 'trajectory', 'baseline_mode': 'all', 'baseline_columns': ['diabetes_t1', 'diabetes_t2', 'diabetes_any', 'ckd', 'migraine', 'systemic_lupus', 'hiv', 'mental_illness', 'cholesterol_disorder', 'depression', 'stroke', 'erectile_dysfunction', 'sex', 'age', 'smoking_status', 'alcohol_status', 'bmi', 'hdl_cholesterol', 'total_cholesterol', 'hba1c', 'alkaline_phosphatase', 'apolipoprotein_a', 'apolipoprotein_b', 'cystatin_c', 'c_reactive_protein', 'igf1', 'lipoprotein_a', 'triglycerides', 'creatinine', 'urea', 'glucose', 'albumin', 'total_protein', 'bilirubin', 'alt', 'haemoglobin', 'mcv', 'living_alone', 'systolic_variation'], 'baseline_coverage': {'train': {'expected': 86911, 'available': 86911, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 18624, 'available': 18624, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}, 'embedding_coverage': {'train': {'expected': 86911, 'available': 86911, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'val': {'expected': 18624, 'available': 18624, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}, 'test': {'expected': 18623, 'available': 18623, 'coverage': 1.0, 'missing_count': 0, 'missing_examples': []}}}",
+    "test_auc_delong": null,
+    "test_auc_ci": null
+  },
+  {
+    "method": "Biomarker Text + CoxPH (emb only)",
+    "test_c_index": 0.6194,
+    "test_mean_td_auc": 0.6127,
+    "test_ibs": 0.1408,
+    "val_c_index": 0.615,
+    "val_mean_td_auc": 0.609,
+    "notes": "Jun 8 run, Qwen3-8B embeddings, biomarker_text_before60.csv, baseline-mode=none",
+    "test_auc_delong": null,
+    "test_auc_ci": null,
+    "test_auc_by_horizon": {
+      "3471": 0.6045,
+      "5620": 0.6146,
+      "7213": 0.6154
+    }
+  },
+  {
+    "method": "Fusion (text+traj emb + baseline)",
+    "test_c_index": 0.6157,
+    "test_mean_td_auc": 0.6073,
+    "test_ibs": 0.1409,
+    "val_c_index": 0.6149,
+    "val_mean_td_auc": 0.6077,
+    "notes": "Jun 8 run, Qwen3-8B text+traj PCA(128) + baseline(39 features), no biomarker emb",
+    "test_auc_delong": null,
+    "test_auc_ci": null,
+    "test_auc_by_horizon": {
+      "3471": 0.5935,
+      "5620": 0.6034,
+      "7213": 0.618
+    }
   }
 ]
