@@ -328,6 +328,8 @@ def main():
     parser.add_argument("--token-cache", type=Path, default=None,
                         help="Path to cached token embeddings (.npz).")
     parser.add_argument("--text-col", type=str, default="trajectory_text")
+    parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Embedding-0.6B",
+                        help="Qwen3-Embedding model name or local path (used when --token-mode=qwen).")
     args = parser.parse_args()
 
     # Optionally initialize Qwen3-Embedding for token embedding
@@ -335,7 +337,7 @@ def main():
     if args.token_mode == "qwen":
         from qwen_embedding import QwenEmbeddingExtractor, EmbeddingConfig
         qwen_config = EmbeddingConfig(
-            model_name="Qwen/Qwen3-Embedding-0.6B",
+            model_name=args.model_name,
             normalize=True,  # L2-normalize token embeddings before mean-pooling
         )
         qwen_extractor = QwenEmbeddingExtractor(qwen_config)
