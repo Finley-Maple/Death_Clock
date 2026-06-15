@@ -1,0 +1,34 @@
+\begin{abstract}
+Accurate mortality risk stratification from electronic health records (EHR)
+is a critical yet challenging task demanding models that reason over
+temporal disease trajectories, numeric biomarkers, and demographic context.
+While large language models (LLMs) have demonstrated broad clinical
+knowledge, it remains unclear whether they can encode the \emph{structural}
+properties of clinical data — numeric precision, temporal ordering, and
+causal relationships — required for calibrated survival prediction.
+
+We present a systematic comparison of five approaches on the UK Biobank
+(n\,=\,124{,}158; 18{,}623 test), spanning zero-shot autoregressive
+inference, hand-crafted feature survival models, and three variants of
+LLM-based embedding combined with Cox proportional hazards (CoxPH):
+(i) disease history prose, (ii) temporal ICD-code sequences, and
+(iii) full clinical summaries (demographics, biomarkers, and disease history).
+
+Three key findings emerge.
+First, a Qwen3-8B embedding of full clinical prose \emph{alone} — with no
+raw numeric features — matches the 39-feature CoxPH baseline
+(C\,=\,0.619 vs.\ 0.619), demonstrating that LLMs can encode numeric
+biomarker structure from text.
+Second, temporal trajectory embeddings achieve the best Harrell C-index
+(0.624, $+$0.005 over baseline), confirming that temporal ordering of
+ICD events is the most discriminative structural property.
+Third, zero-shot Delphi shows poor near-term calibration
+(TD-AUC\,=\,0.52 at 9.5\,yr; IBS\,=\,0.185 vs.\ 0.141) despite
+improving at longer horizons, revealing that autoregressive inference
+without task-specific structural grounding fails for calibrated risk
+stratification.
+These results establish a reproducible benchmark and highlight where
+structured representation matters most for LLM-based clinical prediction.
+\keywords{survival analysis \and LLM embeddings \and EHR \and
+          UK Biobank \and structured multimodal intelligence}
+\end{abstract}
