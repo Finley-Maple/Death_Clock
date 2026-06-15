@@ -1,0 +1,99 @@
+\section{Methods}
+
+\subsection{Dataset and Cohort}
+We use the UK Biobank (UKB)~\cite{ukbiobank}, a prospective cohort of
+500{,}000 UK adults aged 40--69 at recruitment.
+We restrict to participants aged $\geq$\,60 at the end of follow-up or
+death, yielding $n\,=\,124{,}158$ participants.
+The binary outcome is all-cause mortality after age 60.
+We apply a stratified 70/15/15 split: train\,86{,}911,
+val\,18{,}624, test\,18{,}623 (event rate 26.2\% in all splits).
+Features extracted prior to age 60 include: age at recruitment, sex, BMI,
+smoking status, alcohol status, living alone, 21 blood biomarkers
+(HbA1c, total cholesterol, HDL/LDL, CRP, cystatin~C, albumin, etc.),
+11 binary comorbidity flags (T2 diabetes, CKD, depression, stroke, etc.),
+and the full temporal history of ICD-10 diagnoses.
+
+\subsection{Patient Data Representations}
+\label{sec:representations}
+The five methods differ in which modalities they use and how they
+represent them (Fig.~\ref{fig:methods}):
+
+\paragraph{Structured features (39-dim).}
+Demographics, biomarkers, and comorbidity flags are concatenated into a
+39-dimensional numeric vector used by the Baseline and as the raw-feature
+supplement for embedding methods.
+
+\paragraph{Disease-history prose.}
+ICD events before age 60 are serialised chronologically:
+\textit{``At age 44.0, patient was diagnosed with J45 vasomotor rhinitis.
+At age 52.3, patient was diagnosed with F32 depressive episode.''}
+Only disease events are included; no demographics or lab values.
+
+\paragraph{Temporal ICD token stream.}
+The same ICD events are formatted as a structured token sequence:
+\textit{``44yr:J45 $\rightarrow$ 52yr:F32 $\rightarrow$ \ldots''}, preserving
+the temporal ordering in a compact, model-native format.
+
+\paragraph{Full clinical summary prose.}
+All four modalities are combined into a single paragraph:
+demographics, lab values with units, comorbidity flags, and disease
+history. This is the only representation that includes numeric biomarker
+values as text.
+
+\subsection{Methods Compared}
+
+\paragraph{Delphi (zero-shot).}
+Delphi~\cite{delphi2024} is a 7B-parameter autoregressive LLM pre-trained
+on tokenised EHR sequences.
+We feed the temporal ICD token stream and extract the per-position
+death-token logit.
+A sigmoid hazard chain converts per-step logits to a survival curve:
+$h_t = \sigma(\ell_t)$, $S(t) = \prod_{i \le t}(1 - h_i)$.
+Risk at each horizon is $1 - S(t_{\text{horizon}})$.
+No task-specific fine-tuning is applied.
+
+\paragraph{Baseline CoxPH.}
+The 39-dim structured feature vector is fitted directly with
+$\ell_2$-penalised Cox proportional hazards (penaliser\,=\,0.1,
+implemented in \texttt{lifelines}~\cite{lifelines}).
+
+\paragraph{Disease Text Emb + CoxPH.}
+The disease-history prose is encoded by frozen Qwen3-8B~\cite{qwen3}
+in encoder mode (mean pooling of final hidden states) to a 4096-dim
+vector, reduced to 128 dims via PCA fitted on the training set, then
+concatenated with the 39 raw features (167-dim total) and fitted with CoxPH.
+
+\paragraph{Trajectory Emb + CoxPH.}
+Identical to Disease Text Emb + CoxPH, but the input is the temporal
+ICD token stream instead of prose.
+This isolates the effect of temporal ordering vs.\ prose formatting of
+the same ICD events.
+
+\paragraph{Clinical Summary Emb (no raw features).}
+The full clinical summary prose is encoded by Qwen3-8B $\rightarrow$ PCA(128).
+Crucially, \emph{no raw numeric features are concatenated}; the 128-dim
+embedding is the sole input to CoxPH.
+This tests whether the LLM embedding alone captures biomarker-level
+discriminative structure.
+
+\subsection{Evaluation Protocol}
+We report three metrics on the held-out test set:
+(i) Harrell C-index (concordance, higher is better)~\cite{harrellcindex};
+(ii) mean time-dependent AUC (TD-AUC) averaged over horizons
+    9.5, 15.4, and 19.7 years (higher is better);
+(iii) Integrated Brier Score (IBS, lower is better), measuring calibration.
+All metrics are computed with \texttt{lifelines} and \texttt{scikit-survival}.
+No information leakage: PCA and CoxPH are fitted on training splits only;
+val and test transforms use the training-fit PCA.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_methods}
+  \caption{Methods overview. Patient data is separated into four modalities
+           (demographics, biomarkers, comorbidity flags, temporal ICD history)
+           and routed into five processing pipelines with distinct encoder
+           architectures: autoregressive LLM (Delphi), no encoder (Baseline),
+           and bidirectional Qwen3-8B encoder (embedding methods).}
+  \label{fig:methods}
+\end{figure}
