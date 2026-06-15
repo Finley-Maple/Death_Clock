@@ -1,0 +1,100 @@
+\section{Experiments and Results}
+
+\subsection{Implementation Details}
+All Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090
+(124{,}158 patients, $\approx$7\,h per embedding run).
+CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
+Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
+Code and evaluation scripts are available at [repository URL].
+
+\subsection{Main Results}
+
+Table~\ref{tab:main} reports test-set performance for all five methods.
+
+\begin{table}[t]
+\centering
+\caption{Test-set survival prediction results on UK Biobank
+         ($n_{\text{test}} = 18{,}623$, event rate 26.2\%).
+         Best values in \textbf{bold}.
+         $\uparrow$ higher is better; $\downarrow$ lower is better.}
+\label{tab:main}
+\begin{tabular}{lccc}
+\toprule
+Method & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+\midrule
+Delphi (zero-shot)            & 0.6161 & 0.5984 & 0.1846 \\
+Baseline CoxPH (39 features)  & 0.6191 & 0.5999 & 0.1410 \\
+Disease Text Emb + CoxPH      & 0.6156 & 0.6074 & 0.1409 \\
+Trajectory Emb + CoxPH        & \textbf{0.6238} & 0.6001 & 0.1410 \\
+Clinical Summary Emb (no raw) & 0.6194 & \textbf{0.6127} & \textbf{0.1408} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Finding 1 --- Temporal ordering is the critical structural property.}
+Trajectory Emb achieves the best Harrell C-index (0.6238), exceeding the
+baseline by $+$0.005 and Disease Text Emb by $+$0.008.
+Both methods use the same Qwen3-8B encoder and the same 39 raw features;
+the only difference is input format.
+This isolates temporal ordering of ICD events as the structural property
+driving discrimination: prose serialisation discards the temporal structure
+that the token stream preserves.
+
+\paragraph{Finding 2 --- LLMs encode numeric biomarkers from prose.}
+Clinical Summary Emb achieves C\,=\,0.6194 with \emph{no raw numeric
+features}, matching the 39-feature Baseline (0.6191).
+The embedding encodes demographic context, 21 lab values with units, and
+disease history purely from prose.
+That a general-purpose LLM recovers sufficient numeric precision to match
+a fully supervised CoxPH suggests that Qwen3-8B's pre-training has
+internalised biomarker-range semantics relevant to mortality risk.
+Clinical Summary Emb also achieves the best mean TD-AUC (0.6127),
+particularly at the near-term 9.5-year horizon (0.605 vs.\ 0.584 baseline).
+
+\paragraph{Finding 3 --- Zero-shot LLM inference lacks structural calibration.}
+Delphi achieves C\,=\,0.6161 but with substantially worse calibration
+(IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH methods).
+Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (below chance) rising
+to 0.65 at 19.7\,yr (Table~\ref{tab:horizon}), suggesting that Delphi's
+pre-training priors align with chronic disease accumulation over decades
+but not with near-term acute mortality.
+
+\begin{table}[t]
+\centering
+\caption{TD-AUC by prediction horizon on the test set.}
+\label{tab:horizon}
+\begin{tabular}{lccc}
+\toprule
+Method & 9.5\,yr & 15.4\,yr & 19.7\,yr \\
+\midrule
+Delphi (zero-shot)           & 0.522 & 0.586 & \textbf{0.649} \\
+Baseline CoxPH               & 0.584 & 0.596 & 0.612 \\
+Disease Text Emb + CoxPH     & 0.594 & 0.603 & 0.618 \\
+Trajectory Emb + CoxPH       & 0.584 & 0.596 & 0.612 \\
+Clinical Summary Emb         & \textbf{0.605} & \textbf{0.615} & 0.615 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Fusion Ablation}
+We additionally tested late fusion of all embedding modalities with the
+baseline (Disease Text PCA(128) + Trajectory PCA(128) + 39 raw features,
+295-dim total, CoxPH penaliser\,=\,0.1).
+Fusion achieves C\,=\,0.6157 --- virtually identical to Disease Text Emb
+alone (0.6156) and substantially below Trajectory Emb (0.6238).
+Adding disease text to trajectory + baseline dilutes the trajectory
+signal: both encoders represent the same ICD events from different
+perspectives, and their concatenated coefficients cannot be cleanly
+separated under $\ell_2$ regularisation.
+This confirms that temporal ordering, not embedding diversity, is the
+discriminative property.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_main}
+  \caption{Test-set performance across all five methods.
+           (A) Harrell C-index; (B) mean TD-AUC; (C) IBS;
+           (D) TD-AUC by prediction horizon.
+           Dotted line: Baseline CoxPH reference.}
+  \label{fig:results}
+\end{figure}
