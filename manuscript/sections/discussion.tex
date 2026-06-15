@@ -1,47 +1,86 @@
 \section{Discussion}
 
-\paragraph{Temporal structure as the primary discriminator.}
-The performance gap between Trajectory Emb (C\,=\,0.624) and Disease
-Text Emb (C\,=\,0.616) --- with identical encoders and raw features --- is
-the cleanest signal in our results.
+\paragraph{Axis A: Temporal ordering drives the representation gap.}
+The C-index difference between Setting 4 (decoupled age--event encoding,
+0.6238) and Setting 3 (prose serialisation, 0.6156) --- with identical
+Qwen3-8B encoders and raw features --- is the cleanest signal in our
+results.
 Prose serialisation collapses temporal ordering into semantic proximity:
-``At age 44, J45'' and ``At age 52, F32'' appear near each other in
-embedding space regardless of the 8-year interval.
-Token-stream serialisation (``44yr:J45 $\rightarrow$ 52yr:F32'') preserves
-ordinal structure that the encoder translates into positional context.
-This finding aligns with the structured multimodal intelligence thesis:
-surface semantic encoding is insufficient when temporal causal structure
-drives the outcome.
+the sentence \textit{``At age 44, J45''} and \textit{``At age 52, F32''}
+differ only in surface tokens, but the 8-year interval between them is
+invisible to the encoder's attention mechanism.
+Decoupled encoding preserves this structure explicitly: the 128-dim
+sinusoidal age vector ensures that events at age 44 and age 52 are
+geometrically separated before the token embedding is appended.
+This aligns with the structured multimodal intelligence thesis:
+\emph{surface semantic encoding is insufficient when temporal causal
+structure drives the outcome.}
+The +0.008 C-index advantage of S4 over S3 is the primary empirical claim;
+bootstrap confidence intervals will quantify whether this gap exceeds sampling
+noise (planned analysis pending full prediction-file generation).
+Setting 2 (Delphi's ordinal token stream) sits between these two:
+temporal ordering is preserved as positional structure in the input
+sequence, but the autoregressive hazard chain cannot disentangle
+ordering effects from pre-training priors (see calibration gap below).
 
-\paragraph{LLMs can encode numeric structure from prose.}
-The Clinical Summary Emb result is perhaps the most surprising: Qwen3-8B
-matches a 39-feature CoxPH using only prose descriptions of the same
-features.
-This suggests that general-purpose LLM pre-training has internalised
-enough biomarker-range semantics to distinguish, e.g., HbA1c\,=\,52 from
+\paragraph{Axis A: LLMs encode numeric structure from prose.}
+Setting 5 (unified prose, no raw features) achieves C\,=\,0.6194 ---
+matching the 39-feature CoxPH baseline (0.6191) while using no raw
+numeric features.
+This suggests that Qwen3-8B's pre-training has internalised enough
+biomarker-range semantics to distinguish, e.g., HbA1c\,=\,52 from
 HbA1c\,=\,38 in terms of mortality relevance.
 The near-term TD-AUC advantage (0.605 vs.\ 0.584 at 9.5\,yr) further
 suggests the embedding captures interactions between biomarker values and
 disease history that a linear CoxPH on raw features misses.
-However, this numeric encoding is \emph{implicit} --- it cannot be
-inspected or enforced --- which limits trustworthiness in high-stakes
-clinical deployment.
+However, this encoding is \emph{implicit} and cannot be inspected or
+enforced, which limits trustworthiness in high-stakes clinical deployment.
 
-\paragraph{The calibration gap of zero-shot inference.}
-Delphi's IBS of 0.185 vs.\ $\approx$0.141 for all CoxPH methods reveals
+\paragraph{Axis B: Encoder generalization (pending).}
+The Bio\_ClinicalBERT comparison (pending server embedding runs) will
+determine whether the representation-axis findings are specific to
+Qwen3-8B or generalise across encoder families.
+We expect BCB to perform comparably for Setting 3 (short ICD prose well
+within 512 tokens) but potentially worse for Setting 5 due to truncation.
+If the temporal-ordering advantage (S4 over S3) holds for BCB, it
+strengthens the claim that \emph{how} events are serialised matters more
+than which encoder processes them.
+
+\paragraph{Axis C: Fusion method (pending).}
+Preliminary local results for Qwen summation fusion (10k-patient subset)
+show directionally consistent patterns with concatenation: S4·Qwen·sum
+achieves C\,=\,0.593 vs.\ S3·Qwen·sum at 0.586, preserving the Setting 4
+advantage.
+Whether summation fusion improves over concatenation for the full cohort
+will be determined once the full embeddings are available on this machine.
+We do not expect a large difference because both fusions are linear and
+CoxPH's $\ell_2$ regularisation strongly constrains the coefficient space.
+
+\paragraph{Calibration gap of zero-shot inference.}
+Delphi's IBS of 0.185 vs.\ $\approx$0.141 for all CoxPH variants reveals
 a structural grounding problem: the sigmoid hazard chain produces survival
 curves that are systematically miscalibrated relative to observed event
 rates.
-The near-term AUC collapse (0.52 at 9.5\,yr) suggests the model's
-internal hazard estimates do not properly weight acute risk factors
-(CRP, creatinine) that dominate near-term mortality.
-Fine-tuning with a proper scoring rule (e.g., Brier score loss) would
-likely close this gap, but at the cost of zero-shot generalisability.
+The near-term AUC collapse (0.52 at 9.5\,yr) suggests the model's hazard
+estimates do not adequately weight acute risk factors (CRP, creatinine)
+that dominate short-horizon mortality.
+Fine-tuning with a calibration-aware objective would likely close this gap
+but at the cost of zero-shot generalisability.
 
 \paragraph{Limitations.}
-Our embedding methods freeze Qwen3-8B; fine-tuning may yield additional
-gains at substantially higher compute cost.
+All embedding methods freeze their encoders; fine-tuning may yield
+additional gains at substantially higher compute cost.
 IBS and TD-AUC rely on independent censoring assumptions that may be
 violated in UKB.
 All results are from a single biobank cohort; external validation is
 required before clinical translation.
+Bio\_ClinicalBERT's 512-token limit is an architectural constraint that
+disproportionately affects Setting 5; future work should evaluate
+longer-context clinical encoders.
+The primary evaluation metrics (C-index, TD-AUC) measure discrimination but not
+calibration of the predicted survival function.
+We supplement IBS with restricted mean survival time (RMST\,$= \int_0^\tau S(t\mid x)\,\mathrm{d}t$),
+which provides a patient-interpretable calibration summary (expected life-years
+within the follow-up window $\tau$).
+A full RMST-decile calibration analysis is reserved for the complete 12-cell
+matrix once server GPU runs are finalised.

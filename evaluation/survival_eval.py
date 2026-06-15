@@ -217,6 +217,120 @@ def merge_with_embeddings(
     )
 
 
+def _pad_cols(X: np.ndarray, width: int) -> np.ndarray:
+    """Right-pad a 2-D array with zero columns to `width` (no-op if already wide)."""
+    if X.shape[1] >= width:
+        return X
+    pad = np.zeros((X.shape[0], width - X.shape[1]), dtype=X.dtype)
+    return np.concatenate([X, pad], axis=1)
+
+
+def fuse_by_summation(
+    matrices: Dict[str, FeatureMatrix],
+    embeddings: Mapping[int, np.ndarray],
+    proj_dim: Optional[int] = None,
+    drop_missing: bool = True,
+) -> Tuple[Dict[str, FeatureMatrix], int, Dict[str, Dict]]:
+    """
+    Element-wise *summation* fusion of an embedding block with raw baseline
+    features, using fixed projections fitted on the training split only.
+
+    For each split:
+      - the embedding block E is PCA-projected to ``proj_dim`` dims (PCA fit on
+        train eids only) and standardized with train-set mean/std;
+      - the raw baseline block B (already median-imputed) is standardized with
+        train-set mean/std;
+      - both are zero-padded to a common width and added element-wise.
+
+    ``proj_dim`` defaults to the baseline feature width so the two blocks align
+    naturally (PCA(emb) -> base_width, then add to the base_width raw block).
+
+    Returns ``(fused_matrices, fused_width, coverage)``. The fused matrix is a
+    plain feature block — call ``run_cox_evaluation`` with ``pca_components=None``
+    and ``emb_block_width=None``.
+
+    This mirrors the concatenation path (``merge_with_embeddings``) but combines
+    the two modalities additively in a shared latent space rather than stacking
+    them, giving a clean A/B comparison under the same linear CoxPH head.
+    """
+    from sklearn.decomposition import PCA
+
+    if "train" not in matrices:
+        raise ValueError("Train split is required for summation fusion.")
+    base_width = matrices["train"].X.shape[1]
+    if base_width == 0:
+        raise ValueError(
+            "Summation fusion requires baseline features (baseline-mode must not be 'none')."
+        )
+    d = proj_dim or base_width
+
+    # 1. Align embeddings to each split's rows (drop rows without an embedding).
+    aligned: Dict[str, Tuple[FeatureMatrix, np.ndarray]] = {}
+    coverage: Dict[str, Dict] = {}
+    for split, mat in matrices.items():
+        keep_idx: List[int] = []
+        emb_rows: List[np.ndarray] = []
+        missing: List[int] = []
+        for i, eid in enumerate(mat.eids):
+            emb = embeddings.get(eid)
+            if emb is None:
+                missing.append(eid)
+                if not drop_missing:
+                    raise ValueError(f"Embedding missing for eid={eid}")
+                continue
+            keep_idx.append(i)
+            emb_rows.append(np.asarray(emb, dtype=np.float32).ravel())
+        sub = mat.subset(keep_idx)
+        E = np.vstack(emb_rows).astype(np.float32) if emb_rows else np.zeros((0, 1), np.float32)
+        aligned[split] = (sub, E)
+        coverage[split] = {
+            "expected": len(mat.eids),
+            "available": len(keep_idx),
+            "coverage": len(keep_idx) / max(len(mat.eids), 1),
+            "missing_count": len(missing),
+            "missing_examples": missing[:5],
+        }
+
+    train_sub, train_E = aligned["train"]
+    if train_E.shape[0] == 0:
+        raise ValueError("No overlapping embeddings found for the training split.")
+
+    # 2. PCA on the embedding block (train only).
+    n_comp = min(d, train_E.shape[1], train_E.shape[0])
+    pca = PCA(n_components=n_comp, random_state=42)
+    train_E_pca = pca.fit_transform(train_E)
+    print(f"[fuse_by_summation] emb {train_E.shape[1]} -> PCA {n_comp} dims "
+          f"(var explained: {pca.explained_variance_ratio_.sum():.3f}); "
+          f"baseline width {base_width}")
+
+    # 3. Train-set standardization stats for each block.
+    e_mean, e_std = train_E_pca.mean(0), train_E_pca.std(0)
+    e_std[e_std < 1e-8] = 1.0
+    b_mean, b_std = train_sub.X.mean(0), train_sub.X.std(0)
+    b_std[b_std < 1e-8] = 1.0
+
+    width = max(n_comp, base_width)
+
+    fused: Dict[str, FeatureMatrix] = {}
+    for split, (sub, E) in aligned.items():
+        E_pca = pca.transform(E) if E.shape[0] else np.zeros((0, n_comp), np.float32)
+        E_std = (E_pca - e_mean) / e_std
+        B_std = (sub.X - b_mean) / b_std
+        fused_X = (_pad_cols(E_std, width) + _pad_cols(B_std, width)).astype(np.float32)
+        fused[split] = FeatureMatrix(fused_X, sub.durations, sub.events, sub.eids)
+
+    # NOTE on run_cox_evaluation interaction:
+    # The fused matrix returned here is already independently standardized
+    # (both blocks to ~N(0,1) using train statistics).  run_cox_evaluation will
+    # call standardize_features() again on the result, applying a second
+    # standardization.  Re-standardizing an already-standardized block is
+    # numerically near-idempotent (the train-set mean/std of a ~N(0,1) column
+    # is ~0/~1) and does NOT introduce leakage.  The practical effect on
+    # C-index and IBS is negligible.  This design choice keeps fuse_by_summation
+    # self-contained while reusing the existing CoxPH pipeline without patching it.
+    return fused, width, coverage
+
+
 def standardize_features(
     train: FeatureMatrix, splits: Dict[str, FeatureMatrix]
 ) -> Tuple[FeatureMatrix, Dict[str, FeatureMatrix], Dict[str, np.ndarray]]:
@@ -246,7 +360,15 @@ def save_predictions(
     risk_scores: np.ndarray,
     horizons: Sequence[float],
     survival_probs: Optional[np.ndarray],
+    durations: np.ndarray = None,
+    events: np.ndarray = None,
+    survival_probs_dense: Optional[np.ndarray] = None,
+    dense_grid: Optional[np.ndarray] = None,
 ) -> None:
+    if (durations is None) != (events is None):
+        raise ValueError("durations and events must both be provided or both be None.")
+    if (survival_probs_dense is None) != (dense_grid is None):
+        raise ValueError("survival_probs_dense and dense_grid must both be provided or both be None.")
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f"{method_name}_{split}_preds.npz"
     surv_array = (
@@ -254,13 +376,19 @@ def save_predictions(
         if survival_probs is not None
         else np.empty((0, 0), dtype=np.float64)
     )
-    np.savez_compressed(
-        path,
-        eids=np.array(eids, dtype=np.int64),
-        risk_scores=np.asarray(risk_scores, dtype=np.float64),
-        horizons=np.asarray(horizons, dtype=np.float64),
-        survival_probs=surv_array,
-    )
+    save_kwargs: Dict[str, np.ndarray] = {
+        "eids": np.array(eids, dtype=np.int64),
+        "risk_scores": np.asarray(risk_scores, dtype=np.float64),
+        "horizons": np.asarray(horizons, dtype=np.float64),
+        "survival_probs": surv_array,
+    }
+    if durations is not None:
+        save_kwargs["durations"] = np.asarray(durations, dtype=np.float64)
+        save_kwargs["events"] = np.asarray(events, dtype=np.int32)
+    if survival_probs_dense is not None:
+        save_kwargs["survival_probs_dense"] = np.asarray(survival_probs_dense, dtype=np.float64)
+        save_kwargs["dense_grid"] = np.asarray(dense_grid, dtype=np.float64)
+    np.savez_compressed(path, **save_kwargs)
     print(f"[save_predictions] Saved {split} predictions to {path}")
 
 
@@ -348,6 +476,11 @@ def run_cox_evaluation(
         "splits": {},
     }
 
+    # Dense survival grid: 100 points from 0 to the 80th-percentile cap (same
+    # cap used by derive_time_horizons) for per-patient RMST computation.
+    tau = float(np.quantile(train_matrix_std.durations, 0.80))
+    dense_grid = np.linspace(0, tau, 100)
+
     all_splits = {"train": train_matrix_std, **other_splits_std}
     for split_name, matrix in all_splits.items():
         df_features = pd.DataFrame(matrix.X, columns=col_names)
@@ -357,15 +490,28 @@ def run_cox_evaluation(
             surv_df = cph.predict_survival_function(df_features, times=horizons)
             survival_probs = surv_df.T.values if surv_df.size else None
 
+        # Always compute dense grid survival probs for RMST in metrics.
+        surv_dense_df = cph.predict_survival_function(df_features, times=dense_grid)
+        survival_probs_dense = surv_dense_df.T.values if surv_dense_df.size else None
+
         eval_struct = metrics.to_structured(matrix.durations, matrix.events)
         split_metrics = metrics.compute_metrics(
-            train_struct, eval_struct, risk_scores, horizons, survival_probs
+            train_struct, eval_struct, risk_scores, horizons, survival_probs,
+            survival_probs_dense=survival_probs_dense,
+            dense_grid=dense_grid,
         )
         split_metrics["size"] = len(matrix.eids)
         split_metrics["event_rate"] = float(matrix.events.mean()) if len(matrix.events) else 0.0
         results["splits"][split_name] = split_metrics
 
         if save_preds_dir is not None:
-            save_predictions(save_preds_dir, method_name, split_name, matrix.eids, risk_scores, horizons, survival_probs)
+            save_predictions(
+                save_preds_dir, method_name, split_name,
+                matrix.eids, risk_scores, horizons, survival_probs,
+                durations=matrix.durations,
+                events=matrix.events,
+                survival_probs_dense=survival_probs_dense,
+                dense_grid=dense_grid,
+            )
 
     return results

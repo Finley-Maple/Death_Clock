@@ -61,12 +61,33 @@ def derive_time_horizons(
     return horizons
 
 
+def rmst(survival_probs_dense: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    """
+    Compute per-patient Restricted Mean Survival Time (RMST) in years.
+
+    The RMST is restricted to tau = grid[-1] (the maximum time point in the
+    dense grid), which should be set to the 80th percentile of training
+    durations to ensure enough at-risk patients throughout the range.
+
+    Args:
+        survival_probs_dense: array of shape (n_samples, len(grid)) with
+            survival probabilities evaluated at each grid point.
+        grid: 1-D array of time points in days.
+
+    Returns:
+        Per-patient RMST values in years, shape (n_samples,).
+    """
+    return np.trapz(survival_probs_dense, grid, axis=1) / 365.25
+
+
 def compute_metrics(
     train_structured: np.ndarray,
     eval_structured: np.ndarray,
     risk_scores: np.ndarray,
     horizons: Sequence[float],
     survival_probs: Optional[np.ndarray] = None,
+    survival_probs_dense: Optional[np.ndarray] = None,
+    dense_grid: Optional[np.ndarray] = None,
 ) -> Dict:
     """
     Compute survival metrics for a split.
@@ -78,6 +99,9 @@ def compute_metrics(
         horizons: sequence of time horizons (days) for TD-AUC / IBS.
         survival_probs: optional array of shape (n_samples, len(horizons)) with survival
                         probabilities at the specified horizons.
+        survival_probs_dense: optional array of shape (n_samples, len(dense_grid)) with
+                        survival probabilities on a dense grid, used to compute RMST.
+        dense_grid: optional 1-D array of time points in days for the dense grid.
     """
     result = {
         "c_index": None,
@@ -85,6 +109,7 @@ def compute_metrics(
         "td_auc": None,
         "mean_td_auc": None,
         "ibs": None,
+        "rmst_mean": None,
     }
 
     if not LIFELINES_AVAILABLE:
@@ -142,5 +167,11 @@ def compute_metrics(
             result["ibs"] = None
     else:
         result["ibs"] = None
+
+    if survival_probs_dense is not None and dense_grid is not None:
+        try:
+            result["rmst_mean"] = float(rmst(survival_probs_dense, dense_grid).mean())
+        except Exception as exc:
+            logger.warning("RMST computation failed: %s", exc)
 
     return result

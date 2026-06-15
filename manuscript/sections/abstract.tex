@@ -1,34 +1,41 @@
 \begin{abstract}
 Accurate mortality risk stratification from electronic health records (EHR)
-is a critical yet challenging task demanding models that reason over
-temporal disease trajectories, numeric biomarkers, and demographic context.
-While large language models (LLMs) have demonstrated broad clinical
-knowledge, it remains unclear whether they can encode the \emph{structural}
-properties of clinical data — numeric precision, temporal ordering, and
-causal relationships — required for calibrated survival prediction.
+requires models that reason over temporal disease trajectories, numeric
+biomarkers, and demographic context.
+It remains unclear whether large language models (LLMs) can encode the
+\emph{structural} properties of clinical data --- numeric precision,
+temporal ordering, and causal relationships --- required for calibrated
+survival prediction.
 
-We present a systematic comparison of five approaches on the UK Biobank
-(n\,=\,124{,}158; 18{,}623 test), spanning zero-shot autoregressive
-inference, hand-crafted feature survival models, and three variants of
-LLM-based embedding combined with Cox proportional hazards (CoxPH):
-(i) disease history prose, (ii) temporal ICD-code sequences, and
-(iii) full clinical summaries (demographics, biomarkers, and disease history).
+We present a controlled three-axis study on UK Biobank
+($n\,=\,124{,}158$; 18{,}623 test) that systematically varies:
+(A) \emph{input representation} across five temporal-encoding settings
+(cross-sectional, sequential ordinal, isolated prose, decoupled time and
+event, and unified summary prose);
+(B) \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT) for the
+three embedding-based settings; and
+(C) \emph{feature fusion method} (concatenation vs.\ element-wise
+summation) for settings that combine embeddings with raw features.
+All embedding variants use a uniform Cox proportional hazards head,
+enabling direct comparison of structural encoding choices.
 
-Three key findings emerge.
-First, a Qwen3-8B embedding of full clinical prose \emph{alone} — with no
-raw numeric features — matches the 39-feature CoxPH baseline
-(C\,=\,0.619 vs.\ 0.619), demonstrating that LLMs can encode numeric
-biomarker structure from text.
-Second, temporal trajectory embeddings achieve the best Harrell C-index
-(0.624, $+$0.005 over baseline), confirming that temporal ordering of
-ICD events is the most discriminative structural property.
-Third, zero-shot Delphi shows poor near-term calibration
-(TD-AUC\,=\,0.52 at 9.5\,yr; IBS\,=\,0.185 vs.\ 0.141) despite
-improving at longer horizons, revealing that autoregressive inference
-without task-specific structural grounding fails for calibrated risk
-stratification.
-These results establish a reproducible benchmark and highlight where
-structured representation matters most for LLM-based clinical prediction.
+Three key findings emerge from our 12-cell experiment matrix.
+First, \emph{temporal ordering is the critical structural property}:
+decoupled age--event encoding (Setting 4) achieves the best Harrell
+C-index (0.624, $+$0.005 over the CoxPH baseline and $+$0.008 over prose
+serialisation of the same events).
+Second, \emph{LLMs can encode numeric biomarker structure from prose}: a
+Qwen3-8B embedding of full clinical prose with no raw numeric features
+matches the 39-feature CoxPH baseline (C\,=\,0.619 vs.\ 0.619) and
+achieves superior TD-AUC.
+Third, \emph{zero-shot autoregressive inference has a structural calibration
+gap}: Delphi shows poor near-term AUC (0.52 at 9.5\,yr) and substantially
+worse calibration (IBS\,=\,0.185 vs.\ 0.141) despite competitive long-horizon
+discrimination.
+These results establish a reproducible benchmark and suggest that
+\emph{how} temporal structure is encoded may matter more than which specific
+LLM encodes it --- a hypothesis the pending encoder-generalisation results
+(Bio\_ClinicalBERT) will test.
 \keywords{survival analysis \and LLM embeddings \and EHR \and
           UK Biobank \and structured multimodal intelligence}
 \end{abstract}

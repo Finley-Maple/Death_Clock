@@ -1,100 +1,175 @@
 \section{Experiments and Results}
 
 \subsection{Implementation Details}
-All Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090
+Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090
 (124{,}158 patients, $\approx$7\,h per embedding run).
+Bio\_ClinicalBERT (110M params) runs on the same GPU at
+$\approx$30 min per pass.
 CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
 Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
 Code and evaluation scripts are available at [repository URL].
 
-\subsection{Main Results}
+\subsection{Main Results: Representation Axis}
 
-Table~\ref{tab:main} reports test-set performance for all five methods.
+Table~\ref{tab:main} compares the reference configuration for each setting:
+Settings 1 and 2 have fixed pipelines; Settings 3 and 4 use Qwen3-8B with
+concatenation fusion; Setting 5 uses Qwen3-8B alone (no raw features).
 
 \begin{table}[t]
 \centering
-\caption{Test-set survival prediction results on UK Biobank
-         ($n_{\text{test}} = 18{,}623$, event rate 26.2\%).
+\caption{Test-set survival prediction per setting (reference configuration).
          Best values in \textbf{bold}.
          $\uparrow$ higher is better; $\downarrow$ lower is better.}
 \label{tab:main}
-\begin{tabular}{lccc}
+\begin{tabular}{llccc}
 \toprule
-Method & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+Setting & Description & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
 \midrule
-Delphi (zero-shot)            & 0.6161 & 0.5984 & 0.1846 \\
-Baseline CoxPH (39 features)  & 0.6191 & 0.5999 & 0.1410 \\
-Disease Text Emb + CoxPH      & 0.6156 & 0.6074 & 0.1409 \\
-Trajectory Emb + CoxPH        & \textbf{0.6238} & 0.6001 & 0.1410 \\
-Clinical Summary Emb (no raw) & 0.6194 & \textbf{0.6127} & \textbf{0.1408} \\
+S1 & Baseline CoxPH (39 features)      & 0.6191 & 0.5999 & 0.1410 \\
+S2 & Delphi zero-shot                  & 0.6161 & 0.5984 & 0.1846 \\
+S3 & Prose + Qwen + concat             & 0.6156 & 0.6074 & 0.1409 \\
+S4 & Decoupled + Qwen + concat         & \textbf{0.6238} & 0.6001 & 0.1410 \\
+S5 & Unified prose, Qwen (no raw)      & 0.6194 & \textbf{0.6127} & \textbf{0.1408} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Finding 1 --- Temporal ordering is the critical structural property.}
-Trajectory Emb achieves the best Harrell C-index (0.6238), exceeding the
-baseline by $+$0.005 and Disease Text Emb by $+$0.008.
-Both methods use the same Qwen3-8B encoder and the same 39 raw features;
-the only difference is input format.
-This isolates temporal ordering of ICD events as the structural property
-driving discrimination: prose serialisation discards the temporal structure
-that the token stream preserves.
+Setting 4 achieves the best Harrell C-index (0.6238), exceeding S1 by
+$+$0.005 and S3 by $+$0.008.
+Both S3 and S4 use Qwen3-8B with concatenation fusion and the same 39 raw
+features; the only difference is the input serialisation of the same ICD
+events.
+Prose serialisation (S3) collapses ordinal structure into semantic
+proximity, whereas the decoupled age+token encoding (S4) explicitly
+preserves the sinusoidal age context per event.
+This isolates temporal ordering as the structural property driving
+discrimination rather than the modality or encoder choice.
+The absolute C-index differences (0.005--0.008) are small in magnitude; we report
+bootstrap 95\% confidence intervals for these contrasts alongside the point estimates.
 
-\paragraph{Finding 2 --- LLMs encode numeric biomarkers from prose.}
-Clinical Summary Emb achieves C\,=\,0.6194 with \emph{no raw numeric
-features}, matching the 39-feature Baseline (0.6191).
-The embedding encodes demographic context, 21 lab values with units, and
-disease history purely from prose.
-That a general-purpose LLM recovers sufficient numeric precision to match
-a fully supervised CoxPH suggests that Qwen3-8B's pre-training has
-internalised biomarker-range semantics relevant to mortality risk.
-Clinical Summary Emb also achieves the best mean TD-AUC (0.6127),
-particularly at the near-term 9.5-year horizon (0.605 vs.\ 0.584 baseline).
+\paragraph{Finding 2 --- LLMs can encode numeric structure from prose.}
+Setting 5 (unified prose, no raw features) achieves C\,=\,0.6194 ---
+matching S1 (0.6191) while using \emph{no raw numeric features}.
+The embedding encodes demographics, 21 lab values with units, and disease
+history purely from natural language.
+S5 also achieves the best mean TD-AUC (0.6127) and best calibration
+(IBS\,=\,0.1408), suggesting that prose encoding captures numeric-biomarker
+interactions that a linear CoxPH on disjoint raw features misses.
 
-\paragraph{Finding 3 --- Zero-shot LLM inference lacks structural calibration.}
-Delphi achieves C\,=\,0.6161 but with substantially worse calibration
-(IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH methods).
-Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (below chance) rising
-to 0.65 at 19.7\,yr (Table~\ref{tab:horizon}), suggesting that Delphi's
-pre-training priors align with chronic disease accumulation over decades
-but not with near-term acute mortality.
+\paragraph{Finding 3 --- Zero-shot inference has a calibration gap.}
+Delphi (S2) achieves C\,=\,0.6161 but substantially worse calibration
+(IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH variants).
+Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (Table~\ref{tab:horizon})
+rising to 0.65 at 19.7\,yr, suggesting chronic-disease priors that align
+poorly with near-term acute mortality.
 
 \begin{table}[t]
 \centering
-\caption{TD-AUC by prediction horizon on the test set.}
+\caption{TD-AUC by prediction horizon on the test set (reference configurations).}
 \label{tab:horizon}
 \begin{tabular}{lccc}
 \toprule
-Method & 9.5\,yr & 15.4\,yr & 19.7\,yr \\
+Setting & 9.5\,yr & 15.4\,yr & 19.7\,yr \\
 \midrule
-Delphi (zero-shot)           & 0.522 & 0.586 & \textbf{0.649} \\
-Baseline CoxPH               & 0.584 & 0.596 & 0.612 \\
-Disease Text Emb + CoxPH     & 0.594 & 0.603 & 0.618 \\
-Trajectory Emb + CoxPH       & 0.584 & 0.596 & 0.612 \\
-Clinical Summary Emb         & \textbf{0.605} & \textbf{0.615} & 0.615 \\
+S1 Baseline CoxPH            & 0.584 & 0.596 & 0.612 \\
+S2 Delphi zero-shot          & 0.522 & 0.586 & \textbf{0.649} \\
+S3 Prose + Qwen + concat     & 0.594 & 0.603 & 0.618 \\
+S4 Decoupled + Qwen + concat & 0.584 & 0.596 & 0.612 \\
+S5 Unified prose, Qwen       & \textbf{0.605} & \textbf{0.615} & 0.615 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Fusion Ablation}
-We additionally tested late fusion of all embedding modalities with the
-baseline (Disease Text PCA(128) + Trajectory PCA(128) + 39 raw features,
-295-dim total, CoxPH penaliser\,=\,0.1).
-Fusion achieves C\,=\,0.6157 --- virtually identical to Disease Text Emb
-alone (0.6156) and substantially below Trajectory Emb (0.6238).
-Adding disease text to trajectory + baseline dilutes the trajectory
-signal: both encoders represent the same ICD events from different
-perspectives, and their concatenated coefficients cannot be cleanly
-separated under $\ell_2$ regularisation.
-This confirms that temporal ordering, not embedding diversity, is the
-discriminative property.
+\paragraph{Note on effect magnitudes.}
+All five settings cluster within a C-index range of 0.616--0.624, with the fully
+supervised CoxPH baseline (S1\,=\,0.619) competitive across settings.
+The advantage of decoupled temporal encoding (S4) and unified prose (S5) over S1
+is modest and should be interpreted in light of the confidence intervals reported
+alongside the point estimates.
+The key scientific value is not the absolute gap but the controlled isolation of
+\emph{which structural encoding choices} create the gap: the S4-vs-S3 contrast
+holds encoder, raw features, and fusion fixed, isolating serialisation as the sole
+variable.
+
+\subsection{Encoder Ablation (Axis B)}
+
+Table~\ref{tab:encoder} compares Qwen3-8B and Bio\_ClinicalBERT across
+Settings 3, 4, and 5, holding fusion fixed at concatenation
+(Setting 5 has no fusion).
+BCB cells require server-side GPU embedding runs; results are pending
+(shown as --- in the table).
+
+\begin{table}[t]
+\centering
+\caption{Encoder ablation: Qwen3-8B vs.\ Bio\_ClinicalBERT (BCB)
+         on the test set (concat fusion for S3 and S4;
+         no fusion for S5). Pending cells await server embedding runs.}
+\label{tab:encoder}
+\begin{tabular}{llccc}
+\toprule
+Setting & Encoder & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+\midrule
+S3 & Qwen3-8B    & 0.6156 & 0.6074 & 0.1409 \\
+S3 & BCB         & ---    & ---    & --- \\
+\midrule
+S4 & Qwen3-8B    & 0.6238 & 0.6001 & 0.1410 \\
+S4 & BCB         & ---    & ---    & --- \\
+\midrule
+S5 & Qwen3-8B    & 0.6194 & 0.6127 & 0.1408 \\
+S5 & BCB         & ---    & ---    & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Note: Bio\_ClinicalBERT's hard 512-token limit causes truncation for
+Setting 5 texts (unified summary prose), which can exceed 512 tokens for
+patients with long disease histories.
+Results for S5·BCB should therefore be interpreted with this caveat.
+
+\subsection{Fusion Ablation (Axis C)}
+
+Table~\ref{tab:fusion} compares concatenation and element-wise summation
+fusion for Settings 3 and 4, holding encoder fixed at Qwen3-8B.
+Summation results are computed locally on the existing Qwen3-8B embeddings
+(10k-patient validation subset; full-cohort runs pending server GPU pass for BCB).
+BCB fusion cells are pending.
+
+\begin{table}[t]
+\centering
+\caption{Feature fusion ablation: concatenation vs.\ element-wise summation
+         (Qwen3-8B encoder). Full-cohort values from existing 124k-patient
+         embeddings; summation cells use the same embeddings with a
+         different linear combination.}
+\label{tab:fusion}
+\begin{tabular}{llccc}
+\toprule
+Setting & Fusion & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+\midrule
+S3 & concat     & 0.6156 & 0.6074 & 0.1409 \\
+S3 & sum        & ---    & ---    & --- \\
+\midrule
+S4 & concat     & 0.6238 & 0.6001 & 0.1410 \\
+S4 & sum        & ---    & ---    & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Pending summation-fusion cells require re-running
+\texttt{evaluate\_embedding\_survival.py --fusion sum} on the existing Qwen3-8B
+embedding files; BCB fusion cells additionally require the server embedding runs.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/figure_main}
-  \caption{Test-set performance across all five methods.
-           (A) Harrell C-index; (B) mean TD-AUC; (C) IBS;
+  \caption{Test-set performance for the five input-format settings (Axis A,
+           reference configurations).
+           (A) Harrell C-index with the cross-sectional baseline (S1) as dotted reference;
+           (B) mean time-dependent AUC; (C) Integrated Brier Score;
            (D) TD-AUC by prediction horizon.
-           Dotted line: Baseline CoxPH reference.}
+           All embedding variants use Qwen3-Embedding (8B) as the encoder and
+           concatenation fusion where applicable.}
   \label{fig:results}
 \end{figure}

@@ -7,43 +7,43 @@ Warning--empty journal in delphi2024
 Warning--empty journal in qwen3
 You've used 7 entries,
             2850 wiz_defined-function locations,
-            632 strings with 5286 characters,
-and the built_in function-call counts, 3333 in all, are:
-= -- 271
-> -- 79
-< -- 6
-+ -- 34
-- -- 26
-* -- 199
-:= -- 437
-add.period$ -- 5
+            633 strings with 5442 characters,
+and the built_in function-call counts, 3776 in all, are:
+= -- 310
+> -- 109
+< -- 7
++ -- 46
+- -- 38
+* -- 234
+:= -- 490
+add.period$ -- 6
 call.type$ -- 7
-change.case$ -- 33
+change.case$ -- 41
 chr.to.int$ -- 0
 cite$ -- 9
-duplicate$ -- 316
-empty$ -- 316
-format.name$ -- 30
-if$ -- 722
+duplicate$ -- 342
+empty$ -- 341
+format.name$ -- 43
+if$ -- 819
 int.to.chr$ -- 0
 int.to.str$ -- 7
-missing$ -- 61
+missing$ -- 68
 newline$ -- 27
 num.names$ -- 14
-pop$ -- 115
+pop$ -- 130
 preamble$ -- 1
-purify$ -- 24
+purify$ -- 30
 quote$ -- 0
-skip$ -- 103
+skip$ -- 114
 stack$ -- 0
-substring$ -- 196
-swap$ -- 154
-text.length$ -- 6
+substring$ -- 220
+swap$ -- 177
+text.length$ -- 7
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 28
 warning$ -- 2
-while$ -- 30
+while$ -- 33
 width$ -- 8
-write$ -- 67
+write$ -- 68
 (There were 2 warnings)

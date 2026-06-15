@@ -11,44 +11,57 @@ The underlying structure --- temporal dependencies, numeric precision, causal
 relationships between comorbidities --- is what makes this task hard and what
 makes it a meaningful testbed for structured multimodal intelligence.
 
-Large language models (LLMs) have demonstrated impressive broad medical
-knowledge~\cite{delphi2024} and are increasingly applied to clinical prediction.
+Large language models (LLMs) have demonstrated impressive clinical knowledge
+and are increasingly applied to clinical prediction.
 Two distinct paradigms have emerged: \emph{zero-shot autoregressive inference},
 where the LLM directly generates survival-related outputs from tokenised EHR
-sequences, and \emph{supervised embedding}, where a frozen LLM encodes patient
-records as dense vectors that are then fine-tuned with a lightweight survival
-head.
-Both paradigms make implicit claims about structural grounding: the first
-requires the LLM to internally model temporal hazard accumulation; the second
-requires its embedding space to encode clinically discriminative structure.
-Yet these claims have not been systematically evaluated on large-scale,
-diverse EHR data with multiple structural modalities.
+sequences~\cite{delphi2024}, and \emph{supervised embedding}, where a frozen
+LLM encodes patient records as dense vectors combined with a lightweight
+survival head.
+Both paradigms make implicit claims about structural grounding, yet the
+relative importance of specific structural properties --- temporal ordering,
+numeric precision, encoder choice, and fusion method --- has not been
+systematically evaluated under controlled conditions.
 
-We address this gap with a five-way comparison on UK Biobank
-(n\,=\,124{,}158), the largest study of its kind for LLM-based mortality
+We address this gap with a three-axis controlled study on UK Biobank
+($n\,=\,124{,}158$), the largest such benchmark for LLM-based mortality
 prediction.
-Our methods span the full spectrum: a zero-shot autoregressive LLM (Delphi),
-a hand-crafted-feature CoxPH baseline, and three Qwen3-8B embedding variants
-that differ in \emph{which structural modalities} they encode --- disease
-history prose, temporal ICD sequences, and full clinical summaries including
-numeric biomarkers.
-All embedding methods use a uniform CoxPH survival head, enabling
-apples-to-apples comparison of the embedding itself.
+We vary:
+\textbf{(A)} \emph{input representation} across five temporal-encoding
+settings, from cross-sectional bag-of-features to fully unified clinical
+prose;
+\textbf{(B)} \emph{encoder architecture} (Qwen3-8B vs.\
+Bio\_ClinicalBERT) for the three embedding-based settings, to test whether
+findings are encoder-specific;
+\textbf{(C)} \emph{feature fusion method} (concatenation vs.\ element-wise
+summation) for settings that combine embeddings with structured features.
+All embedding variants use a uniform CoxPH survival head, enabling
+apples-to-apples comparison of the structural encoding choices.
 
 Our main contributions are:
 \begin{itemize}
-  \item A systematic, reproducible benchmark comparing zero-shot LLM
-        inference, supervised LLM embedding, and classical survival models
-        for all-cause mortality on UK Biobank.
-  \item The finding that a Qwen3-8B embedding of full clinical prose
-        \emph{without any raw numeric features} matches a 39-feature
-        CoxPH baseline, demonstrating LLM structural encoding of numeric
-        biomarkers from text.
-  \item The finding that temporal ICD trajectory embeddings outperform
-        disease-text embeddings on Harrell C-index, establishing temporal
-        ordering as the critical structural property for discrimination.
-  \item Evidence that zero-shot autoregressive inference (Delphi) produces
-        poorly calibrated near-term risk scores despite competitive
-        long-horizon discrimination, revealing a structural grounding gap
-        in current autoregressive LLMs.
+  \item A systematic, reproducible three-axis benchmark disentangling
+        representation, encoder, and fusion effects for LLM-based mortality
+        prediction on UK Biobank.
+
+  \item Evidence that \emph{temporal ordering} is the key structural property:
+        decoupled age--event encoding (Setting~4) achieves a $+$0.008 C-index
+        advantage over prose serialisation of identical events, holding encoder,
+        raw features, and fusion fixed; bootstrap CIs will determine significance.
+
+  \item The finding that Qwen3-8B can encode numeric biomarker structure
+        from prose: unified summary embedding (Setting 5) with \emph{no raw
+        features} matches a 39-feature CoxPH baseline, demonstrating
+        implicit numeric precision in LLM embeddings.
+
+  \item Evidence that zero-shot Delphi (Setting 2) has a structural
+        calibration gap: poor near-term AUC and high Brier score reveal
+        that autoregressive inference without task-specific structural
+        grounding is insufficient for calibrated risk stratification.
+
+  \item A \emph{planned} encoder-generalisation comparison
+        (Qwen3-Embedding (8B) vs.\ Bio\_ClinicalBERT) and feature-fusion
+        comparison (concatenation vs.\ summation) that will characterise how much
+        the structural encoding choice --- rather than model family or fusion
+        method --- drives prediction quality.
 \end{itemize}
