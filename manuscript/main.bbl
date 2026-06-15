@@ -1,0 +1,34 @@
+\begin{thebibliography}{1}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\providecommand{\doi}[1]{https://doi.org/#1}
+
+\bibitem{ukbiobank}
+Bycroft, C., et~al.: The {UK} {Biobank} resource with deep phenotyping and
+  genomic data. Nature  \textbf{562},  203--209 (2018)
+
+\bibitem{coxph_original}
+Cox, D.R.: Regression models and life-tables. Journal of the Royal Statistical
+  Society B  \textbf{34},  187--220 (1972)
+
+\bibitem{lifelines}
+Davidson-Pilon, C.: lifelines: survival analysis in {Python}. Journal of Open
+  Source Software  (2019)
+
+\bibitem{harrellcindex}
+Harrell, F.E., et~al.: Evaluating the yield of medical tests. JAMA
+  \textbf{247},  2543--2546 (1982)
+
+\bibitem{deephit}
+Lee, C., Zame, W., Yoon, J., van~der Schaar, M.: {DeepHit}: A deep learning
+  approach to survival analysis with competing risks. In: AAAI Conference on
+  Artificial Intelligence (2018)
+
+\bibitem{delphi2024}
+Steinberg, E., et~al.: Delphi: Data extraction and longitudinal phenotype
+  harmonization infrastructure  (2024)
+
+\bibitem{qwen3}
+Team, Q.: Qwen3 technical report  (2025)
+
+\end{thebibliography}
