@@ -1,0 +1,47 @@
+\section{Discussion}
+
+\paragraph{Temporal structure as the primary discriminator.}
+The performance gap between Trajectory Emb (C\,=\,0.624) and Disease
+Text Emb (C\,=\,0.616) --- with identical encoders and raw features --- is
+the cleanest signal in our results.
+Prose serialisation collapses temporal ordering into semantic proximity:
+``At age 44, J45'' and ``At age 52, F32'' appear near each other in
+embedding space regardless of the 8-year interval.
+Token-stream serialisation (``44yr:J45 $\rightarrow$ 52yr:F32'') preserves
+ordinal structure that the encoder translates into positional context.
+This finding aligns with the structured multimodal intelligence thesis:
+surface semantic encoding is insufficient when temporal causal structure
+drives the outcome.
+
+\paragraph{LLMs can encode numeric structure from prose.}
+The Clinical Summary Emb result is perhaps the most surprising: Qwen3-8B
+matches a 39-feature CoxPH using only prose descriptions of the same
+features.
+This suggests that general-purpose LLM pre-training has internalised
+enough biomarker-range semantics to distinguish, e.g., HbA1c\,=\,52 from
+HbA1c\,=\,38 in terms of mortality relevance.
+The near-term TD-AUC advantage (0.605 vs.\ 0.584 at 9.5\,yr) further
+suggests the embedding captures interactions between biomarker values and
+disease history that a linear CoxPH on raw features misses.
+However, this numeric encoding is \emph{implicit} --- it cannot be
+inspected or enforced --- which limits trustworthiness in high-stakes
+clinical deployment.
+
+\paragraph{The calibration gap of zero-shot inference.}
+Delphi's IBS of 0.185 vs.\ $\approx$0.141 for all CoxPH methods reveals
+a structural grounding problem: the sigmoid hazard chain produces survival
+curves that are systematically miscalibrated relative to observed event
+rates.
+The near-term AUC collapse (0.52 at 9.5\,yr) suggests the model's
+internal hazard estimates do not properly weight acute risk factors
+(CRP, creatinine) that dominate near-term mortality.
+Fine-tuning with a proper scoring rule (e.g., Brier score loss) would
+likely close this gap, but at the cost of zero-shot generalisability.
+
+\paragraph{Limitations.}
+Our embedding methods freeze Qwen3-8B; fine-tuning may yield additional
+gains at substantially higher compute cost.
+IBS and TD-AUC rely on independent censoring assumptions that may be
+violated in UKB.
+All results are from a single biobank cohort; external validation is
+required before clinical translation.
