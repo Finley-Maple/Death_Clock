@@ -1,0 +1,54 @@
+\section{Introduction}
+
+All-cause mortality prediction from electronic health records (EHR) is a
+canonical clinical risk stratification task with direct relevance to
+preventive medicine, care prioritisation, and health resource allocation.
+Unlike typical classification problems, mortality prediction requires models
+to reason over \emph{structured multimodal data}: longitudinal sequences of
+disease events with precise temporal ordering, numeric biomarker measurements
+with clinical significance thresholds, and demographic context.
+The underlying structure --- temporal dependencies, numeric precision, causal
+relationships between comorbidities --- is what makes this task hard and what
+makes it a meaningful testbed for structured multimodal intelligence.
+
+Large language models (LLMs) have demonstrated impressive broad medical
+knowledge~\cite{delphi2024} and are increasingly applied to clinical prediction.
+Two distinct paradigms have emerged: \emph{zero-shot autoregressive inference},
+where the LLM directly generates survival-related outputs from tokenised EHR
+sequences, and \emph{supervised embedding}, where a frozen LLM encodes patient
+records as dense vectors that are then fine-tuned with a lightweight survival
+head.
+Both paradigms make implicit claims about structural grounding: the first
+requires the LLM to internally model temporal hazard accumulation; the second
+requires its embedding space to encode clinically discriminative structure.
+Yet these claims have not been systematically evaluated on large-scale,
+diverse EHR data with multiple structural modalities.
+
+We address this gap with a five-way comparison on UK Biobank
+(n\,=\,124{,}158), the largest study of its kind for LLM-based mortality
+prediction.
+Our methods span the full spectrum: a zero-shot autoregressive LLM (Delphi),
+a hand-crafted-feature CoxPH baseline, and three Qwen3-8B embedding variants
+that differ in \emph{which structural modalities} they encode --- disease
+history prose, temporal ICD sequences, and full clinical summaries including
+numeric biomarkers.
+All embedding methods use a uniform CoxPH survival head, enabling
+apples-to-apples comparison of the embedding itself.
+
+Our main contributions are:
+\begin{itemize}
+  \item A systematic, reproducible benchmark comparing zero-shot LLM
+        inference, supervised LLM embedding, and classical survival models
+        for all-cause mortality on UK Biobank.
+  \item The finding that a Qwen3-8B embedding of full clinical prose
+        \emph{without any raw numeric features} matches a 39-feature
+        CoxPH baseline, demonstrating LLM structural encoding of numeric
+        biomarkers from text.
+  \item The finding that temporal ICD trajectory embeddings outperform
+        disease-text embeddings on Harrell C-index, establishing temporal
+        ordering as the critical structural property for discrimination.
+  \item Evidence that zero-shot autoregressive inference (Delphi) produces
+        poorly calibrated near-term risk scores despite competitive
+        long-horizon discrimination, revealing a structural grounding gap
+        in current autoregressive LLMs.
+\end{itemize}
