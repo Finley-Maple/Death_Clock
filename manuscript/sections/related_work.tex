@@ -1,0 +1,45 @@
+\section{Related Work}
+
+\subsection{Survival Analysis with Clinical Features}
+Cox proportional hazards~\cite{coxph_original} remains the dominant survival
+model in clinical prediction due to its interpretability and calibration
+properties.
+Applied to structured EHR features, CoxPH baselines on large biobank
+cohorts typically achieve Harrell C-index in the 0.60--0.68 range for
+all-cause mortality, with performance driven by biomarkers such as
+HbA1c, cystatin~C, and CRP~\cite{harrellcindex}.
+Deep survival models (DeepHit~\cite{deephit}, DeepSurv) offer flexibility
+but rarely outperform well-regularised CoxPH on structured tabular data
+without imaging or genomic inputs.
+
+\subsection{LLM-Based Clinical Prediction}
+Foundation models pre-trained on biomedical text have been fine-tuned for
+clinical prediction tasks including readmission, sepsis onset, and length
+of stay.
+Delphi~\cite{delphi2024} pioneered the autoregressive EHR paradigm:
+ICD codes and demographic tokens are serialised and processed by a causal
+LLM trained to predict future diagnosis tokens, with the death-token
+logit repurposed as a risk score.
+Concurrent work on encoder-style LLMs (BioClinicalBERT, GatorTron,
+Med-PaLM) has shown that dense embeddings of clinical notes and discharge
+summaries carry prognostic signal when combined with shallow survival
+heads.
+However, most evaluations are limited to in-hospital outcomes on small
+cohorts and do not systematically disentangle which structural modalities
+--- temporal ordering, numeric precision, or diagnostic co-occurrence ---
+drive embedding quality.
+
+\subsection{Structured Multimodal Clinical Representations}
+The PRCV topic of structured multimodal intelligence motivates models
+that go beyond statistical semantics to capture spatial, temporal, and
+causal structure in scientific and clinical data.
+In the EHR domain, temporal structure (sequence of diagnoses, drug
+exposures, lab trends) has been encoded via recurrent networks, temporal
+convolutions, and more recently transformer-based architectures trained
+on ICD event streams.
+Biomarker-level structure --- where numeric values carry clinical meaning
+relative to reference ranges and comorbidity context --- has received less
+attention in the LLM embedding literature.
+Our work directly tests whether a general-purpose LLM encoder can recover
+both types of structure from prose representations, and compares this
+against explicit temporal sequence encoding.
