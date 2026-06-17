@@ -28,24 +28,25 @@ and the full temporal history of ICD-10 diagnoses.
 We design a controlled three-axis ablation to ask:
 \emph{how should temporal clinical information be encoded for mortality
 risk stratification?}
-Figs.~\ref{fig:input_formats} and~\ref{fig:methods} show the full design.
+Fig.~\ref{fig:overview} shows the full design.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\textwidth]{figures/figure_input_formats}
-  \caption{How the five input settings encode temporal information differently.
-           (A)~Setting 2 (Delphi): age is fused additively into the token embedding
-           via a learned sinusoidal positional encoding; temporal ordering is
-           preserved but exact inter-event duration is implicit.
-           (B)~Settings 3 and 5 (Prose): age appears as a text scalar
-           (\textit{``at age 44.0''}) — invisible as geometry to the encoder's attention.
-           (C)~Setting 4 (Trajectory): age and ICD event are encoded in \emph{separate}
-           streams (128-dim sinusoidal age encoding; text encoder for the ICD token),
-           then concatenated per event and mean-pooled.
-           The inset heatmap shows the 128-dim sinusoidal age encoding for ages
-           20--60, confirming explicit geometric separation between events at
-           different life stages.}
-  \label{fig:input_formats}
+  \includegraphics[width=\textwidth]{figures/figure_1}
+  \caption{Overview of the five experimental settings and their encoding pipelines.
+           \textbf{S1} (top): demographics, biomarkers, and comorbidities are
+           concatenated into a fixed-dimension feature vector for CoxPH.
+           \textbf{S2}: age-tagged ICD tokens are fed to a GPT-based generative
+           transformer (Delphi) in zero-shot mode.
+           \textbf{S3}: disease history is serialised as natural-language prose
+           and encoded by a frozen LLM; the resulting embedding is fused with
+           raw features.
+           \textbf{S4}: age values are mapped to a continuous sinusoidal encoding
+           in parallel with ICD token embeddings; the two streams are concatenated
+           per event, mean-pooled, and fused with raw features.
+           \textbf{S5} (bottom): all modalities are combined into a single paragraph
+           and encoded by the LLM with no raw features concatenated.}
+  \label{fig:overview}
 \end{figure}
 
 \paragraph{Axis A — Input Representation (5 settings).}
@@ -190,13 +191,3 @@ No information leakage: PCA projections (both axes B and C) and CoxPH
 coefficients are fitted on training splits only; val and test transforms
 use the training-fit parameters.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\textwidth]{figures/figure_methods}
-  \caption{Architecture overview. Patient data is separated into five modalities
-           and routed through three axes: (A) five input representations
-           (see also Fig.~\ref{fig:input_formats} for a detailed comparison of
-           temporal encoding strategies), (B) two encoder architectures for
-           settings 3--5, and (C) two fusion methods for settings 3--4.}
-  \label{fig:methods}
-\end{figure}
