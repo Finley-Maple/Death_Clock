@@ -106,6 +106,11 @@ Steinberg, E., et~al.: Serialized {EHR} make for good text representations.
 Team, Q.: Qwen3 technical report. arXiv  \textbf{2505.09388} (2025),
   arXiv:2505.09388
 
+\bibitem{vaswani2017attention}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N.,
+  Kaiser, {\L}., Polosukhin, I.: Attention is all you need. In: Advances in
+  Neural Information Processing Systems. vol.~30 (2017)
+
 \bibitem{xie2022temporal}
 Xie, F., Yuan, H., Ning, Y., Feng, M., Ong, M.E.H., Lyu, J., Liu, N., Rajnics,
   P.: Deep learning for temporal data representation in electronic health

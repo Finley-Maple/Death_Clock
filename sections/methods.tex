@@ -77,8 +77,9 @@ of increasing temporal and modality richness:
 
   \item \textbf{Decoupled time and event (Setting 4).}
         Age at diagnosis and the ICD token are encoded in parallel, separate
-        streams: the age is mapped to a 128-dim sinusoidal encoding
-        (matching Delphi's AgeEncoding), and each ICD token string is
+        streams: the age is mapped to a 128-dim sinusoidal encoding adapted
+        from the Transformer positional encoding~\cite{vaswani2017attention}
+        (matching Delphi's AgeEncoding~\cite{delphi2024}), and each ICD token string is
         embedded independently by the chosen text encoder.
         Per-event representations are concatenated (age $\parallel$ token)
         and mean-pooled across all events.

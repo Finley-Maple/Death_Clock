@@ -45,9 +45,13 @@ CORE-BEHRT and extensions of BEHRT to UK Biobank~\cite{behrtukb} have demonstrat
 this family of models scales well but retains the discrete temporal encoding bottleneck.
 
 \paragraph{Continuous sinusoidal time encoding.}
-Time2Vec~\cite{time2vec} proposed a model-agnostic continuous time representation combining
-a linear trend component and learnable sinusoidal components, providing geometric separation
-between events at different timestamps without discretisation.
+The sinusoidal positional encoding introduced by Vaswani et al.~\cite{vaswani2017attention}
+provides the mathematical foundation for this family of methods, mapping scalar positions
+to fixed-frequency sine and cosine components that ensure geometric separation in embedding
+space.
+Time2Vec~\cite{time2vec} extended this to a learnable, model-agnostic continuous time
+representation combining a linear trend component with learnable sinusoidal components,
+providing geometric separation between events at different timestamps without discretisation.
 Delphi~\cite{delphi2024} applied this design at population scale: a GPT-style
 generative transformer trained on $\sim$2 million EHR trajectories uses a fixed-frequency
 sinusoidal age encoding to map each event's age-at-occurrence into a continuous geometric
