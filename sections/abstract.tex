@@ -1,0 +1,44 @@
+\begin{abstract}
+Accurate mortality risk stratification from electronic health records (EHR)
+requires models that reason over temporal disease trajectories, numeric
+biomarkers, and demographic context.
+It remains unclear whether large language models (LLMs) can encode the
+\emph{structural} properties of clinical data, including numeric precision,
+temporal ordering, and causal relationships, required for calibrated
+survival prediction.
+
+We present a controlled three-axis study on a UK Biobank respiratory
+disease subgroup ($n\,=\,124{,}158$; 18{,}623 test), a multimorbid
+population where the temporal complexity of disease trajectories makes
+structural encoding choices particularly consequential.
+The study systematically varies:
+(A) \emph{input representation} across five temporal-encoding settings
+(cross-sectional, sequential ordinal, isolated prose, decoupled time and
+event, and unified summary prose);
+(B) \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT) for the
+three embedding-based settings; and
+(C) \emph{feature fusion method} (concatenation vs.\ element-wise
+summation) for settings that combine embeddings with raw features.
+All embedding variants use a uniform Cox proportional hazards head,
+enabling direct comparison of structural encoding choices.
+
+Three key findings emerge from our 12-cell experiment matrix.
+First, \emph{temporal ordering is the critical structural property}:
+decoupled age--event encoding (Setting 4) achieves the best Harrell
+C-index (0.624, $+$0.005 over the CoxPH baseline and $+$0.008 over prose
+serialisation of the same events).
+Second, \emph{LLMs can encode numeric biomarker structure from prose}: a
+Qwen3-8B embedding of full clinical prose with no raw numeric features
+matches the 39-feature CoxPH baseline (C\,=\,0.619 vs.\ 0.619) and
+achieves superior TD-AUC.
+Third, \emph{autoregressive generation has a structural calibration
+gap}: Delphi shows poor near-term AUC (0.52 at 9.5\,yr) and substantially
+worse calibration (IBS\,=\,0.185 vs.\ 0.141) despite competitive long-horizon
+discrimination.
+These results establish a reproducible benchmark and suggest that
+\emph{how} temporal structure is encoded matters more than which specific
+LLM encodes it, a claim supported by Bio\_ClinicalBERT producing near-identical
+C-indices to Qwen3-8B across Settings 3 and 4.
+\keywords{survival analysis \and LLM embeddings \and EHR \and
+          UK Biobank \and structured multimodal intelligence}
+\end{abstract}

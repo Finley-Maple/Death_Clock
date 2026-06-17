@@ -1,0 +1,116 @@
+\begin{thebibliography}{10}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\providecommand{\doi}[1]{https://doi.org/#1}
+
+\bibitem{bioclinicalbert}
+Alsentzer, E., Murphy, J., Boag, W., Weng, W.H., Jin, D., Naumann, T.,
+  McDermott, M.: Publicly available clinical {BERT} embeddings. In: Proceedings
+  of the 2nd Clinical Natural Language Processing Workshop. pp. 72--78 (2019).
+  \doi{10.18653/v1/W19-1909}
+
+\bibitem{ukbiobank}
+Bycroft, C., Freeman, C., Petkova, D., Band, G., Elliott, L.T., Sharp, K.,
+  Motyer, A., Vukcevic, D., Delaneau, O., O'Connell, J., Cortes, A., Welsh, S.,
+  Young, A., Effingham, M., McVean, G., Leslie, S., Allen, N., Donnelly, P.,
+  Marchini, J.: The {UK} {Biobank} resource with deep phenotyping and genomic
+  data. Nature  \textbf{562},  203--209 (2018). \doi{10.1038/s41586-018-0579-z}
+
+\bibitem{retain}
+Choi, E., Bahadori, M.T., Kulas, J.A., Schuetz, A., Stewart, W.F., Sun, J.:
+  {RETAIN}: An interpretable predictive model for healthcare using reverse time
+  attention mechanism. In: Advances in Neural Information Processing Systems.
+  vol.~29 (2016)
+
+\bibitem{doctorai}
+Choi, E., Bahadori, M.T., Schuetz, A., Stewart, W.F., Sun, J.: Doctor {AI}:
+  Predicting clinical events via recurrent neural networks. In: Proceedings of
+  the 1st Machine Learning for Healthcare Conference. Proceedings of Machine
+  Learning Research, vol.~56, pp. 301--318 (2016)
+
+\bibitem{coxph_original}
+Cox, D.R.: Regression models and life-tables. Journal of the Royal Statistical
+  Society B  \textbf{34},  187--220 (1972)
+
+\bibitem{harrellcindex}
+Harrell, F.E., Califf, R.M., Pryor, D.B., Lee, K.L., Rosati, R.A.: Evaluating
+  the yield of medical tests. JAMA  \textbf{247}(18),  2543--2546 (1982).
+  \doi{10.1001/jama.1982.03320430047030}
+
+\bibitem{harutyunyan2019}
+Harutyunyan, H., Khachatrian, H., Kale, D.C., Ver~Steeg, G., Galstyan, A.:
+  Multitask learning and benchmarking with clinical time series data.
+  Scientific Data  \textbf{6}, ~96 (2019). \doi{10.1038/s41597-019-0103-9}
+
+\bibitem{ukbmdrmf}
+Jiang, Y., Zhao, B., Wang, X., Tang, B., Peng, H., Luo, Z., Shen, Y., Wang, Z.,
+  Jiang, Z., Wang, J., Ye, J., Wang, X., Zhu, H.: {UKB-MDRMF}: A multi-disease
+  risk and multimorbidity framework based on {UK} {Biobank} data. Nature
+  Communications  \textbf{16}, ~3767 (2025). \doi{10.1038/s41467-025-58724-3}
+
+\bibitem{deepsurv}
+Katzman, J.L., Shaham, U., Cloninger, A., Bates, J., Jiang, T., Kluger, Y.:
+  {DeepSurv}: Personalized treatment recommender system using a {Cox}
+  proportional hazards deep neural network. BMC Medical Research Methodology
+  \textbf{18}, ~24 (2018). \doi{10.1186/s12874-018-0482-1}
+
+\bibitem{time2vec}
+Kazemi, S.M., Goel, R., Eghbali, S., Ramanan, J., Sahota, J., Thakur, S., Wu,
+  S., Smyth, C., Poupart, P., Brubaker, M.: {Time2Vec}: Learning a vector
+  representation of time. arXiv  \textbf{1907.05321} (2019), arXiv:1907.05321
+
+\bibitem{llmehrenc}
+Kim, J., et~al.: Large language models are powerful electronic health record
+  encoders. arXiv  \textbf{2502.17403} (2025), arXiv:2502.17403
+
+\bibitem{behrtukb}
+Laur{\`o}, I., et~al.: Extending {BEHRT} to {UK} {Biobank}: assessing
+  transformer model performance in clinical prediction. Frontiers in Digital
+  Health  (2026). \doi{10.3389/fdgth.2026.1715506}
+
+\bibitem{deephit}
+Lee, C., Zame, W., Yoon, J., van~der Schaar, M.: {DeepHit}: A deep learning
+  approach to survival analysis with competing risks. In: Proceedings of the
+  32nd AAAI Conference on Artificial Intelligence. pp. 2314--2321 (2018)
+
+\bibitem{behrt}
+Li, Y., Rao, S., Solares, J.R.A., Hassaine, A., Ramakrishnan, R., Canoy, D.,
+  Zhu, Y., Rahimi, K., Salimi-Khorshidi, G.: {BEHRT}: Transformer for
+  electronic health records. Scientific Reports  \textbf{10}, ~7155 (2020).
+  \doi{10.1038/s41598-020-62922-y}
+
+\bibitem{cehrbert}
+Pang, C., Jiang, X., Kalluri, K.S., Spotnitz, M., Chen, R., Perotte, A.,
+  Natarajan, K.: {CEHR-BERT}: Incorporating temporal information from
+  structured {EHR} data to improve prediction tasks. In: Proceedings of Machine
+  Learning for Health. Proceedings of Machine Learning Research, vol.~158
+  (2021), arXiv:2111.08585
+
+\bibitem{medbert}
+Rasmy, L., Xiang, Y., Xie, Z., Tao, C., Zhi, D.: Med-{BERT}: pretrained
+  contextualized embeddings on large-scale structured electronic health records
+  for disease prediction. npj Digital Medicine  \textbf{4}, ~86 (2021).
+  \doi{10.1038/s41746-021-00455-y}
+
+\bibitem{delphi2024}
+Shmatko, A., Jung, A.W., Gaurav, K., Brunak, S., Mortensen, L.H., Birney, E.,
+  Fitzgerald, T., Gerstung, M.: Learning the natural history of human disease
+  with generative transformers. Nature  \textbf{647},  248--256 (2025).
+  \doi{10.1038/s41586-025-09529-3}
+
+\bibitem{serialehr}
+Steinberg, E., et~al.: Serialized {EHR} make for good text representations.
+  arXiv  \textbf{2510.13843} (2025), arXiv:2510.13843
+
+\bibitem{qwen3}
+Team, Q.: Qwen3 technical report. arXiv  \textbf{2505.09388} (2025),
+  arXiv:2505.09388
+
+\bibitem{xie2022temporal}
+Xie, F., Yuan, H., Ning, Y., Feng, M., Ong, M.E.H., Lyu, J., Liu, N., Rajnics,
+  P.: Deep learning for temporal data representation in electronic health
+  records: A systematic review of challenges and methodologies. Journal of
+  Biomedical Informatics  \textbf{126},  103980 (2022).
+  \doi{10.1016/j.jbi.2021.103980}
+
+\end{thebibliography}

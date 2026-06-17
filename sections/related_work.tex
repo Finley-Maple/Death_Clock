@@ -1,0 +1,81 @@
+\section{Related Work}
+
+\subsection{Classical and Deep Survival Models}
+Cox proportional hazards~\cite{coxph_original} remains the dominant survival model in clinical
+prediction due to its calibration properties and interpretability.
+Applied to structured EHR features, CoxPH baselines on large biobank cohorts typically achieve
+Harrell C-index in the 0.60--0.68 range for all-cause mortality, driven by biomarkers such as
+HbA1c, cystatin~C, and CRP~\cite{harrellcindex}.
+Deep survival models, including DeepHit~\cite{deephit} and DeepSurv~\cite{deepsurv}, replace
+the linear CoxPH predictor with a neural network but rarely outperform well-regularised CoxPH
+on tabular data without imaging or genomic inputs.
+Large-scale UK Biobank frameworks have extended this paradigm to joint risk prediction across
+thousands of phenotypes~\cite{ukbmdrmf}; respiratory multimorbidity cohorts are identified
+as exhibiting the highest structural complexity and the lowest discriminative performance,
+motivating the cohort selection and the representation focus of the present study.
+All of these tabular and deep tabular approaches operate on pre-extracted fixed-dimension
+feature vectors and cannot exploit the sequential and contextual structure present in
+longitudinal ICD histories.
+
+\subsection{Temporal Encoding in EHR Models}
+Systematic reviews of deep learning on temporal EHR data identify temporal encoding as the
+central unsolved methodological challenge~\cite{xie2022temporal}.
+Five qualitatively distinct encoding strategies have been proposed, each with a different
+notion of what it means to ``represent time.''
+
+\paragraph{Sequence-order encoding.}
+The earliest deep EHR models, Doctor~AI~\cite{doctorai} and RETAIN~\cite{retain} (both
+NeurIPS 2016), treated the patient history as an ordered sequence of visit vectors processed
+by a GRU or reverse-time attention network.
+Temporal ordering is preserved, but inter-event duration is invisible: an 8-year gap and
+a 1-week gap between the same two diagnoses are indistinguishable if they occupy the same
+ordinal position.
+
+\paragraph{Discrete time tokens.}
+BERT-style foundation models pretrained on ICD code sequences, including BEHRT~\cite{behrt}
+and Med-BERT~\cite{medbert}, encode time through sequence position and bucketed age tokens,
+improving over RNNs by modelling long-range co-occurrence but retaining the same ordinal
+limitation.
+CEHR-BERT~\cite{cehrbert} introduced Artificial Time Tokens (ATTs) inserted between visits
+to represent the inter-visit interval in discrete buckets (e.g.\ 1--7 days, 1--4 weeks).
+ATTs make duration explicit but remain categorical: two gaps of 8 and 9 years fall in the
+same token and are geometrically indistinguishable, a critical limitation for decade-long
+mortality trajectories.
+CORE-BEHRT and extensions of BEHRT to UK Biobank~\cite{behrtukb} have demonstrated that
+this family of models scales well but retains the discrete temporal encoding bottleneck.
+
+\paragraph{Continuous sinusoidal time encoding.}
+Time2Vec~\cite{time2vec} proposed a model-agnostic continuous time representation combining
+a linear trend component and learnable sinusoidal components, providing geometric separation
+between events at different timestamps without discretisation.
+Delphi~\cite{delphi2024} applied this design at population scale: a GPT-style
+generative transformer trained on $\sim$2 million EHR trajectories uses a fixed-frequency
+sinusoidal age encoding to map each event's age-at-occurrence into a continuous geometric
+space.
+The trajectory embedding in Setting~4 of the present study adopts the same sinusoidal design
+principle from Delphi but deploys it within a discriminative CoxPH pipeline, enabling a
+controlled comparison against prose serialisation that was not possible in Delphi's generative
+framework.
+
+\paragraph{Prose serialisation and LLM encoders.}
+The most recent paradigm replaces explicit temporal codes with natural-language text and relies
+on the implicit temporal understanding of large pretrained LLMs.
+Benchmarking studies have shown that serialising patient records as structured prose and
+encoding them with general-purpose LLMs (e.g.\ GTE-Qwen2-7B, LLM2Vec-Llama3.1-8B) frequently
+matches or exceeds task-specific EHR foundation models across diverse clinical prediction
+tasks~\cite{llmehrenc,serialehr}.
+Temporal ordering in these approaches enters through the chronological order of sentences in
+the text, but the time gap between events is not geometrically preserved: from surface tokens
+alone, the encoder cannot distinguish a 2-week interval from an 8-year one.
+
+\subsection{The Encoding Format Gap}
+Despite this progression, no prior study has held the cohort, survival model, and encoder
+family constant while systematically varying the temporal encoding format from implicit prose
+to continuous geometric representation.
+The benchmark established by Harutyunyan et al.~\cite{harutyunyan2019} for ICU time series
+and the encoder ablations in the LLM-as-encoder literature~\cite{llmehrenc} vary model
+families, not encoding strategies.
+The present study isolates encoding format as the sole experimental axis (five serialisation
+settings, two encoders, two fusion methods, one CoxPH head), providing the first controlled
+evidence that geometric continuity of the time axis, rather than model family or scale, is the
+primary structural determinant of long-horizon survival discrimination.
