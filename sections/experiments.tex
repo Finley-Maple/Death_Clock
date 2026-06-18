@@ -11,28 +11,64 @@ Code and evaluation scripts are available at [repository URL].
 
 \subsection{Main Results: Representation Axis}
 
-Table~\ref{tab:main} compares the reference configuration for each setting:
+Table~\ref{tab:full} reports test-set results for all 12 experimental cells.
 Settings 1 and 2 have fixed pipelines; Settings 3 and 4 use Qwen3-8B with
-concatenation fusion; Setting 5 uses Qwen3-8B alone (no raw features).
+concatenation fusion as the reference configuration; Setting 5 uses Qwen3-8B
+alone (no raw features).
+Fig.~\ref{fig:ref_bars} visualises the reference-configuration metrics at a
+glance, and Fig.~\ref{fig:horizon} shows the TD-AUC horizon profile for the
+five reference configurations.
 
 \begin{table}[t]
 \centering
-\caption{Test-set survival prediction per setting (reference configuration).
-         Best values in \textbf{bold}.
-         $\uparrow$ higher is better; $\downarrow$ lower is better.}
-\label{tab:main}
-\begin{tabular}{llccc}
+\caption{Test-set results for all 12 experimental cells.
+         Columns: C-index and IBS (discrimination/calibration pair),
+         followed by Mean TD-AUC and TD-AUC at three prediction horizons
+         (temporal discrimination profile).
+         Best value per column in \textbf{bold}
+         ($\uparrow$ higher is better; $\downarrow$ lower is better).
+         Shaded rows are reference configurations.
+         $^\dagger$S5·BCB affected by 512-token truncation (see Sec.~\ref{sec:encoder}).}
+\label{tab:full}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccccc}
 \toprule
-Setting & Description & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+Setting & Encoder/Fusion & C-index $\uparrow$ & IBS $\downarrow$ & Mean TD-AUC $\uparrow$ & 9.5\,yr $\uparrow$ & 15.4\,yr $\uparrow$ & 19.7\,yr $\uparrow$ \\
 \midrule
-S1 & Baseline CoxPH (39 features)      & 0.6191 & 0.5999 & 0.1410 \\
-S2 & Delphi zero-shot                  & 0.6161 & 0.5984 & 0.1846 \\
-S3 & Prose + Qwen + concat             & 0.6156 & \textbf{0.6074} & 0.1409 \\
-S4 & Decoupled + Qwen + concat         & \textbf{0.6233} & 0.5991 & 0.1410 \\
-S5 & Unified prose, Qwen (no raw)      & 0.6195 & 0.6128 & \textbf{0.1408} \\
+\rowcolor{gray!12}
+S1 — Baseline CoxPH   & —              & 0.6191 & 0.1410 & 0.5999 & 0.584 & 0.596 & 0.612 \\
+\rowcolor{gray!12}
+S2 — Delphi zero-shot & Delphi         & 0.6161 & 0.1846 & 0.5984 & 0.522 & 0.586 & \textbf{0.649} \\
+\midrule
+\rowcolor{gray!12}
+S3 — Isolated prose   & Qwen · concat  & 0.6156 & 0.1409 & \textbf{0.6074} & 0.594 & 0.603 & 0.618 \\
+S3 — Isolated prose   & Qwen · sum     & 0.5875 & 0.1421 & 0.5813 & 0.568 & 0.583 & 0.587 \\
+S3 — Isolated prose   & BCB · concat   & 0.6225 & 0.1410 & 0.6014 & 0.586 & 0.597 & 0.613 \\
+S3 — Isolated prose   & BCB · sum      & 0.5844 & 0.1416 & 0.5819 & 0.575 & 0.578 & 0.589 \\
+\midrule
+\rowcolor{gray!12}
+S4 — Decoupled time   & Qwen · concat  & \textbf{0.6233} & 0.1410 & 0.5991 & 0.583 & 0.595 & 0.611 \\
+S4 — Decoupled time   & Qwen · sum     & 0.5842 & 0.1417 & 0.5757 & 0.571 & 0.576 & 0.578 \\
+S4 — Decoupled time   & BCB · concat   & 0.6232 & 0.1410 & 0.6025 & 0.587 & 0.599 & 0.614 \\
+S4 — Decoupled time   & BCB · sum      & 0.5955 & 0.1413 & 0.5868 & 0.583 & 0.588 & 0.588 \\
+\midrule
+\rowcolor{gray!12}
+S5 — Unified prose    & Qwen (no raw)  & 0.6195 & \textbf{0.1408} & 0.6128 & \textbf{0.605} & \textbf{0.615} & 0.615 \\
+S5 — Unified prose    & BCB$^\dagger$  & 0.6371 & 0.1430 & 0.5074 & 0.510 & 0.508 & 0.505 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_2a}
+  \caption{Reference-configuration results for the five input-format settings.
+           (A) Harrell C-index; (B) Integrated Brier Score (lower is better);
+           (C) Mean TD-AUC. The dotted line marks the S1 CoxPH baseline value
+           in each panel. All embedding settings use Qwen3-8B with concatenation
+           fusion where applicable.}
+  \label{fig:ref_bars}
+\end{figure}
 
 \paragraph{Finding 1: Temporal ordering is the critical structural property.}
 Setting 4 achieves the best Harrell C-index among the reference configurations (0.6233),
@@ -60,26 +96,19 @@ interactions that a linear CoxPH on disjoint raw features misses.
 \paragraph{Finding 3: Zero-shot inference has a calibration gap.}
 Delphi (S2) achieves C\,=\,0.6161 but substantially worse calibration
 (IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH variants).
-Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (Table~\ref{tab:horizon})
+Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (Fig.~\ref{fig:horizon})
 rising to 0.65 at 19.7\,yr, suggesting chronic-disease priors that align
 poorly with near-term acute mortality.
 
-\begin{table}[t]
-\centering
-\caption{TD-AUC by prediction horizon on the test set (reference configurations).}
-\label{tab:horizon}
-\begin{tabular}{lccc}
-\toprule
-Setting & 9.5\,yr & 15.4\,yr & 19.7\,yr \\
-\midrule
-S1 Baseline CoxPH            & 0.584 & 0.596 & 0.612 \\
-S2 Delphi zero-shot          & 0.522 & 0.586 & \textbf{0.649} \\
-S3 Prose + Qwen + concat     & 0.594 & 0.603 & 0.618 \\
-S4 Decoupled + Qwen + concat & 0.583 & 0.595 & 0.611 \\
-S5 Unified prose, Qwen       & \textbf{0.605} & \textbf{0.615} & 0.615 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_2b}
+  \caption{TD-AUC by prediction horizon for the five reference configurations.
+           Delphi (S2) rises from near-chance (0.52) at 9.5\,yr to peak (0.65)
+           at 19.7\,yr, while CoxPH-based settings show a comparatively flat
+           profile across horizons.}
+  \label{fig:horizon}
+\end{figure}
 
 \paragraph{Note on effect magnitudes.}
 All five reference settings cluster within a C-index range of 0.616--0.623,
@@ -256,15 +285,3 @@ This result is consistent across both encoders: BCB summation (0.584--0.596)
 and Qwen summation (0.584--0.588) fall below the S1 baseline (0.619),
 while concatenation variants (0.622--0.624) exceed it.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\textwidth]{figures/figure_main}
-  \caption{Test-set performance for the five input-format settings (Axis A,
-           reference configurations).
-           (A) Harrell C-index with the cross-sectional baseline (S1) as dotted reference;
-           (B) mean time-dependent AUC; (C) Integrated Brier Score;
-           (D) TD-AUC by prediction horizon.
-           All embedding variants use Qwen3-Embedding (8B) as the encoder and
-           concatenation fusion where applicable.}
-  \label{fig:results}
-\end{figure}
