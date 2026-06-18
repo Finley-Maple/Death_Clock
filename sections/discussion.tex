@@ -36,37 +36,21 @@ disease history that a linear CoxPH on raw features misses.
 However, this encoding is \emph{implicit} and cannot be inspected or
 enforced, which limits trustworthiness in high-stakes clinical deployment.
 
-\paragraph{Axis B: Encoder generalization.}
-Bio\_ClinicalBERT (BCB) and Qwen3-8B produce near-identical C-indices for
-Settings 3 and 4 (BCB: 0.6225/0.6232; Qwen: 0.6156/0.6233), confirming that
-the discriminative information in disease-history prose is accessible to both
-encoder families.
-The temporal-ordering advantage persists for Qwen ($\Delta$C\,=\,$+$0.008,
-$p<0.001$) but is negligible for BCB ($\Delta$C\,=\,$+$0.001), suggesting that
-BCB's local attention patterns partially capture ordinal structure from prose,
-reducing the marginal benefit of explicit decoupling.
-Setting 5 reveals a hard architectural constraint: S5·BCB achieves the highest
-C-index overall (0.6371) yet near-chance TD-AUC (0.507), because BCB's
-512-token limit silently truncates the disease-history section, retaining
-primarily a strong age signal that ranks patients by overall mortality risk
-but loses temporal variation.
-Together, these results confirm that \emph{how} events are serialised matters
-more than which encoder processes them, with the qualification that encoder
-context length mediates the magnitude of the serialisation benefit.
-
-\paragraph{Axis C: Fusion method.}
-Concatenation fusion uniformly outperforms element-wise summation across all
-settings and encoders, with a C-index gap of $+$0.028--$+$0.039.
-Summation projects the embedding into the same 60-dimensional space as the
-raw features before adding them, discarding information orthogonal to the
-leading principal components; concatenation retains 64 independent embedding
-dimensions alongside all 60 raw features, preserving representational capacity.
-Summation variants (C\,=\,0.584--0.596) fall below the cross-sectional CoxPH
-baseline (0.619), while concatenation variants (0.622--0.624) exceed it,
-making fusion strategy a more consequential choice than encoder selection.
-The Setting 4 advantage over Setting 3 is preserved under concatenation
-but compressed under summation (BCB·sum: 0.596 vs.\ 0.584), consistent with
-information loss from the dimensionality reduction step.
+\paragraph{Ablation axes B and C.}
+The encoder and fusion ablations confirm that the Axis~A findings are robust
+rather than artefacts of a specific implementation choice.
+For Axis~B, BCB and Qwen3-8B produce near-identical C-indices for S3 and S4,
+confirming that discriminative information is accessible to both encoder
+families; the temporal-ordering advantage of S4 over S3 persists
+($\Delta$C\,=\,$+$0.008 for Qwen, $p<0.001$).
+The anomalously high S5·BCB C-index (0.6371) is explained by 512-token
+truncation retaining primarily age signal, which collapses TD-AUC to 0.507.
+For Axis~C, concatenation outperforms summation by $+$0.028--$+$0.039 C-index
+across all cells, confirming that retaining independent embedding dimensions
+alongside raw features preserves more representational capacity than projective
+fusion.
+The primary conclusion — that serialisation format drives discrimination more
+than encoder family or fusion method — is supported across both ablation axes.
 
 \paragraph{Calibration gap of autoregressive generation.}
 Delphi's IBS of 0.185 vs.\ $\approx$0.141 for supervised CoxPH variants

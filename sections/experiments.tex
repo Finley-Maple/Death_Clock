@@ -191,97 +191,33 @@ S5 (unified prose, Qwen) does not significantly exceed S1
 ($\Delta$C\,=\,$+$0.0004, $p=0.45$), consistent with the absence of
 temporal decoupling in the prose serialisation.
 
-\subsection{Encoder Ablation (Axis B)}
+\subsection{Ablation Studies (Axes B and C)}
 \label{sec:encoder}
 
-Table~\ref{tab:encoder} compares Qwen3-8B and Bio\_ClinicalBERT across
-Settings 3, 4, and 5, holding fusion fixed at concatenation
-(Setting 5 has no fusion).
+\paragraph{Axis B: Encoder architecture.}
+BCB and Qwen3-8B produce near-identical C-indices for S3 and S4
+(BCB: 0.6225/0.6232; Qwen: 0.6156/0.6233; full data in Table~\ref{tab:full}),
+confirming that discriminative information is accessible to both encoder
+families.
+The temporal-ordering advantage (S4 over S3) persists for Qwen
+($\Delta$C\,=\,$+$0.008, $p<0.001$) but is negligible for BCB
+($\Delta$C\,=\,$+$0.001), suggesting BCB's local attention partially
+captures ordinal structure from prose, reducing the benefit of explicit
+decoupling.
+S5·BCB achieves the highest C-index (0.6371) yet near-chance TD-AUC
+(0.507): BCB's 512-token limit truncates the disease-history tail, retaining
+a strong age signal but losing temporal variation.
+Qwen3-8B (8192-token context) is therefore the appropriate encoder for
+Setting~5.
 
-\begin{table}[t]
-\centering
-\caption{Encoder ablation: Qwen3-8B vs.\ Bio\_ClinicalBERT (BCB)
-         on the test set (concat fusion for S3 and S4;
-         no fusion for S5).
-         $^\dagger$S5·BCB result is affected by BCB's 512-token truncation
-         (see text).}
-\label{tab:encoder}
-\begin{tabular}{llccc}
-\toprule
-Setting & Encoder & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
-\midrule
-S3 & Qwen3-8B    & 0.6156 & 0.6074 & 0.1409 \\
-S3 & BCB         & 0.6225 & 0.6014 & 0.1410 \\
-\midrule
-S4 & Qwen3-8B    & 0.6233 & 0.5991 & 0.1410 \\
-S4 & BCB         & 0.6232 & 0.6025 & 0.1410 \\
-\midrule
-S5 & Qwen3-8B    & 0.6195 & \textbf{0.6128} & \textbf{0.1408} \\
-S5 & BCB$^\dagger$ & 0.6371 & 0.5074 & 0.1430 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-For Settings 3 and 4, BCB and Qwen3-8B produce near-identical C-indices
-(BCB: 0.6225/0.6232; Qwen: 0.6156/0.6233), suggesting that the
-discriminative information in disease-history prose is accessible to both
-encoders.
-Qwen3-8B shows modestly higher mean TD-AUC for S3 (0.607 vs.\ 0.601),
-while BCB is marginally higher for S4 (0.603 vs.\ 0.599).
-
-Setting 5 reveals an unexpected pattern: S5·BCB achieves the highest
-C-index (0.6371) among all configurations, yet its mean TD-AUC collapses
-to 0.507.
-This divergence arises from BCB's 512-token limit: the unified summary
-prose frequently exceeds 512 tokens, causing the disease-history tail,
-which contains time-varying events, to be truncated.
-The truncated embedding retains primarily demographics and laboratory
-values (which appear early in the text) and may encode a strong age
-signal that ranks patients by overall mortality risk but lacks the temporal
-variation needed for time-specific discrimination.
-Qwen3-8B (max\_length\,=\,8192) is therefore the appropriate encoder for
-Setting 5; the S5·BCB result is reported for completeness.
-
-\subsection{Fusion Ablation (Axis C)}
-
-Table~\ref{tab:fusion} compares concatenation and element-wise summation
-fusion for Settings 3 and 4, for both encoders.
-All cells use the full 124k-patient cohort.
-
-\begin{table}[t]
-\centering
-\caption{Feature fusion ablation: concatenation (PCA to 64 dims, appended to
-         60 raw features) vs.\ element-wise summation (PCA to 60 dims,
-         z-scored and added to raw features), across both encoders
-         for Settings 3 and 4.
-         Best values per column in \textbf{bold}.}
-\label{tab:fusion}
-\begin{tabular}{lllccc}
-\toprule
-Setting & Encoder & Fusion & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
-\midrule
-S3 & Qwen3-8B & concat & \textbf{0.6156} & \textbf{0.6074} & \textbf{0.1409} \\
-S3 & Qwen3-8B & sum    & 0.5875 & 0.5813 & 0.1421 \\
-S3 & BCB      & concat & 0.6225 & 0.6014 & 0.1410 \\
-S3 & BCB      & sum    & 0.5844 & 0.5819 & 0.1416 \\
-\midrule
-S4 & Qwen3-8B & concat & \textbf{0.6233} & 0.5991 & \textbf{0.1410} \\
-S4 & Qwen3-8B & sum    & 0.5842 & 0.5757 & 0.1417 \\
-S4 & BCB      & concat & 0.6232 & \textbf{0.6025} & \textbf{0.1410} \\
-S4 & BCB      & sum    & 0.5955 & 0.5868 & 0.1413 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Concatenation fusion uniformly outperforms summation across all
-settings and encoders, with a C-index gap of $+$0.028--$+$0.039 in favour
-of concatenation.
-Summation projects the embedding into the same 60-dimensional space as the
-raw features and adds them, which discards information that lies orthogonal
-to the first 60 principal components; concatenation retains 64 independent
-embedding dimensions alongside all 60 raw features, preserving more
-capacity.
-This result is consistent across both encoders: BCB summation (0.584--0.596)
-and Qwen summation (0.584--0.588) fall below the S1 baseline (0.619),
-while concatenation variants (0.622--0.624) exceed it.
+\paragraph{Axis C: Feature fusion.}
+Concatenation uniformly outperforms summation by $+$0.028--$+$0.039
+C-index (Table~\ref{tab:full}).
+Summation projects the embedding to 60 dimensions before adding raw
+features, discarding information orthogonal to the leading principal
+components; concatenation retains 64 independent embedding dimensions
+alongside all 60 raw features.
+Summation variants (0.584--0.596) fall below the S1 baseline (0.619),
+while concatenation variants (0.622--0.624) exceed it, making fusion
+strategy a more consequential choice than encoder selection.
 

@@ -137,40 +137,14 @@ We compare two linear fusion methods:
 \end{itemize}
 
 \paragraph{Resulting experiment matrix.}
-Combining Settings 1--2 (no encoder, no fusion) with the 2-encoder $\times$
-2-fusion ablation for Settings 3--4 and 2-encoder for Setting 5 gives
-\textbf{12 total cells} (Table~\ref{tab:matrix}).
-
-\begin{table}[ht]
-\centering
-\small
-\caption{Experiment matrix. Settings 1 and 2 have no encoder or fusion axis.
-         BCB = Bio\_ClinicalBERT.
-         Qwen3-8B embedding runs used an NVIDIA RTX 3090; BCB embedding runs
-         (cells marked $\star$) used an NVIDIA RTX 4090 (remote server).}
-\label{tab:matrix}
-\begin{tabular}{llcc}
-\toprule
-Setting & Encoder & Fusion & Cell \\
-\midrule
-S1 — Cross-sectional      & —           & —      & Baseline CoxPH \\
-S2 — Sequential ordinal   & Delphi      & —      & Delphi zero-shot \\
-\midrule
-S3 — Isolated prose       & Qwen3-8B    & concat & S3·Qwen·concat \\
-S3 — Isolated prose       & Qwen3-8B    & sum    & S3·Qwen·sum \\
-S3 — Isolated prose       & BCB$^\star$ & concat & S3·BCB·concat$^\star$ \\
-S3 — Isolated prose       & BCB$^\star$ & sum    & S3·BCB·sum$^\star$ \\
-\midrule
-S4 — Decoupled time+event & Qwen3-8B    & concat & S4·Qwen·concat \\
-S4 — Decoupled time+event & Qwen3-8B    & sum    & S4·Qwen·sum \\
-S4 — Decoupled time+event & BCB$^\star$ & concat & S4·BCB·concat$^\star$ \\
-S4 — Decoupled time+event & BCB$^\star$ & sum    & S4·BCB·sum$^\star$ \\
-\midrule
-S5 — Unified prose        & Qwen3-8B    & —      & S5·Qwen \\
-S5 — Unified prose        & BCB$^\star$ & —      & S5·BCB$^\star$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+Combining Settings 1--2 (fixed pipelines) with the 2-encoder $\times$
+2-fusion ablation for Settings 3--4 and 2-encoder ablation for Setting~5
+yields \textbf{12 total cells}.
+S1 and S2 serve as non-embedding baselines; the 10 embedding cells
+(S3--S5, both encoders, both fusion methods where applicable)
+are the primary ablation space.
+Qwen3-8B embedding runs used an NVIDIA RTX\,3090; BCB embedding runs used
+an NVIDIA RTX\,4090.
 
 \subsection{Evaluation Protocol}
 We report five metrics on the held-out test set:
