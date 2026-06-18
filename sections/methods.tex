@@ -49,7 +49,7 @@ Fig.~\ref{fig:overview} shows the full design.
   \label{fig:overview}
 \end{figure}
 
-\paragraph{Axis A — Input Representation (5 settings).}
+\paragraph{Input Representation (5 settings).}
 Patient data before age 60 is serialised into five distinct representations
 of increasing temporal and modality richness:
 
@@ -97,7 +97,7 @@ of increasing temporal and modality richness:
         the embedding alone is fed to CoxPH.
 \end{enumerate}
 
-\paragraph{Axis B — Encoder Architecture (Settings 3--5).}
+\paragraph{Encoder Architecture (Settings 3--5).}
 Settings 3, 4, and 5 require a text encoder.
 We compare two frozen encoders to test whether results are specific to one
 model family:
@@ -117,7 +117,7 @@ In Setting 4, the token embedder within the decoupled pipeline is swapped
 between Qwen3-8B and Bio\_ClinicalBERT; the sinusoidal age encoding is
 shared across both variants.
 
-\paragraph{Axis C — Feature Fusion (Settings 3--4 only).}
+\paragraph{Feature Fusion (Settings 3--4 only).}
 Settings 3 and 4 produce a dense embedding that must be combined with the
 39-dim raw feature block.
 We compare two linear fusion methods:

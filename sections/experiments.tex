@@ -191,10 +191,10 @@ S5 (unified prose, Qwen) does not significantly exceed S1
 ($\Delta$C\,=\,$+$0.0004, $p=0.45$), consistent with the absence of
 temporal decoupling in the prose serialisation.
 
-\subsection{Ablation Studies (Axes B and C)}
+\subsection{Ablation Studies: Encoder and Fusion}
 \label{sec:encoder}
 
-\paragraph{Axis B: Encoder architecture.}
+\paragraph{Encoder architecture.}
 BCB and Qwen3-8B produce near-identical C-indices for S3 and S4
 (BCB: 0.6225/0.6232; Qwen: 0.6156/0.6233; full data in Table~\ref{tab:full}),
 confirming that discriminative information is accessible to both encoder
@@ -210,7 +210,7 @@ a strong age signal but losing temporal variation.
 Qwen3-8B (8192-token context) is therefore the appropriate encoder for
 Setting~5.
 
-\paragraph{Axis C: Feature fusion.}
+\paragraph{Feature fusion.}
 Concatenation uniformly outperforms summation by $+$0.028--$+$0.039
 C-index (Table~\ref{tab:full}).
 Summation projects the embedding to 60 dimensions before adding raw

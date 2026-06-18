@@ -1,6 +1,6 @@
 \section{Discussion}
 
-\paragraph{Axis A: Temporal ordering drives the representation gap.}
+\paragraph{Temporal ordering drives the representation gap.}
 The C-index difference between Setting 4 (decoupled age--event encoding,
 0.6233) and Setting 3 (prose serialisation, 0.6156), using identical
 Qwen3-8B encoders and raw features, is the cleanest signal in our
@@ -36,21 +36,21 @@ disease history that a linear CoxPH on raw features misses.
 However, this encoding is \emph{implicit} and cannot be inspected or
 enforced, which limits trustworthiness in high-stakes clinical deployment.
 
-\paragraph{Ablation axes B and C.}
-The encoder and fusion ablations confirm that the Axis~A findings are robust
-rather than artefacts of a specific implementation choice.
-For Axis~B, BCB and Qwen3-8B produce near-identical C-indices for S3 and S4,
-confirming that discriminative information is accessible to both encoder
-families; the temporal-ordering advantage of S4 over S3 persists
+\paragraph{Encoder and fusion ablations.}
+The encoder and fusion ablations confirm that the encoding-format findings are
+robust rather than artefacts of a specific implementation choice.
+For encoder choice, BCB and Qwen3-8B produce near-identical C-indices for S3
+and S4, confirming that discriminative information is accessible to both
+encoder families; the temporal-ordering advantage of S4 over S3 persists
 ($\Delta$C\,=\,$+$0.008 for Qwen, $p<0.001$).
 The anomalously high S5·BCB C-index (0.6371) is explained by 512-token
 truncation retaining primarily age signal, which collapses TD-AUC to 0.507.
-For Axis~C, concatenation outperforms summation by $+$0.028--$+$0.039 C-index
-across all cells, confirming that retaining independent embedding dimensions
-alongside raw features preserves more representational capacity than projective
-fusion.
+For fusion strategy, concatenation outperforms summation by
+$+$0.028--$+$0.039 C-index across all cells, confirming that retaining
+independent embedding dimensions alongside raw features preserves more
+representational capacity than projective fusion.
 The primary conclusion — that serialisation format drives discrimination more
-than encoder family or fusion method — is supported across both ablation axes.
+than encoder family or fusion method — is supported across both ablations.
 
 \paragraph{Calibration gap of autoregressive generation.}
 Delphi's IBS of 0.185 vs.\ $\approx$0.141 for supervised CoxPH variants
