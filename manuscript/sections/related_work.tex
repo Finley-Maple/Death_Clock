@@ -22,8 +22,11 @@ providing geometric separation without discretisation, a design adopted by
 Delphi~\cite{delphi2024} at population scale.
 The most recent paradigm serialises patient records as structured prose and
 encodes them with general-purpose LLMs; benchmarking studies~\cite{llmehrenc,serialehr}
-show this frequently matches task-specific EHR models while remaining
-zero-shot.
+show this frequently matches task-specific EHR models while remaining zero-shot.
+Machine learning approaches applied specifically to respiratory disease include
+COPD patient phenotyping~\cite{wang2025copd} and group-Shapley feature selection
+for clinical risk stratification~\cite{luo2026grasp}; neither addresses the
+temporal encoding question central to survival discrimination.
 
 Despite this progression, no prior study has held the cohort, survival model,
 and encoder family constant while systematically varying the temporal encoding

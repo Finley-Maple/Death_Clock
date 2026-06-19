@@ -53,28 +53,16 @@ The primary conclusion, that serialisation format drives discrimination more
 than encoder family or fusion method, is supported across both ablations.
 
 \paragraph{Calibration gap of autoregressive generation.}
-Delphi's IBS of 0.185 vs.\ $\approx$0.141 for supervised CoxPH variants
-must be interpreted alongside an important asymmetry: Delphi operates solely
-on serialised ICD codes and demographic tokens and has no access to the
-numeric biomarker features (HbA1c, CRP, creatinine, cystatin C) available to
-the CoxPH baselines.
-This input asymmetry means the gap partly reflects missing acute biomarker
-signal rather than a deficiency of the autoregressive approach within its
-intended operating regime.
-More fundamentally, the sigmoid hazard chain produces survival curves without
-a calibration reference from the target population, an inherent constraint of
-zero-shot deployment under distribution shift between pre-training and the
-UK Biobank cohort.
-The near-term AUC collapse (0.52 at 9.5\,yr) is consistent with this
-interpretation: short-horizon mortality risk is dominated by derangements in
-CRP, creatinine, and albumin that do not appear in the ICD token stream.
-These results therefore reflect a structural limitation of the autoregressive
-generation paradigm for \emph{acute} risk stratification: the paradigm
-lacks access to the quantitative physiological signal that most strongly
-predicts near-term death.
+Delphi's IBS of 0.185 vs.\ $\approx$0.141 for CoxPH variants partly reflects
+a covariate asymmetry: Delphi has no access to HbA1c, CRP, creatinine, or
+cystatin~C, so the gap captures missing acute biomarker signal as much as a
+deficiency of the autoregressive paradigm.
+The near-term AUC collapse (0.52 at 9.5\,yr) is consistent with this: short-
+horizon mortality is dominated by physiological derangements absent from the
+ICD token stream, an inherent constraint of zero-shot deployment under
+distribution shift from pre-training to the UK Biobank cohort.
 Fine-tuning with a calibration-aware objective and numeric biomarker inputs
-would likely close this gap substantially, but at the cost of zero-shot
-generalisability across cohorts.
+would likely close this gap, but at the cost of zero-shot generalisability.
 
 \paragraph{Limitations.}
 All embedding methods freeze their encoders; fine-tuning may yield
