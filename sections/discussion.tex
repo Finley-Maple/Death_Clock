@@ -24,7 +24,7 @@ sequence, but the autoregressive hazard chain cannot separate
 ordering effects from pre-training priors (see calibration gap below).
 
 \paragraph{Setting 5: LLMs encode numeric biomarker structure from prose.}
-Setting 5 (unified prose, no raw features) achieves C\,=\,0.6195 ---
+Setting 5 (unified prose, no raw features) achieves C\,=\,0.6195,
 matching the 39-feature CoxPH baseline (0.6191) while using no raw
 numeric features.
 This suggests that Qwen3-8B's pre-training has internalised enough
@@ -49,8 +49,8 @@ For fusion strategy, concatenation outperforms summation by
 $+$0.028--$+$0.039 C-index across all cells, confirming that retaining
 independent embedding dimensions alongside raw features preserves more
 representational capacity than projective fusion.
-The primary conclusion — that serialisation format drives discrimination more
-than encoder family or fusion method — is supported across both ablations.
+The primary conclusion, that serialisation format drives discrimination more
+than encoder family or fusion method, is supported across both ablations.
 
 \paragraph{Calibration gap of autoregressive generation.}
 Delphi's IBS of 0.185 vs.\ $\approx$0.141 for supervised CoxPH variants

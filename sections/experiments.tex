@@ -7,7 +7,8 @@ Bio\_ClinicalBERT (110M params) runs on the same GPU at
 $\approx$30 min per pass.
 CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
 Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
-Code and evaluation scripts are available at \url{https://github.com/Finley-Maple/Death_Clock}.
+\begin{sloppypar}Code and evaluation scripts are available at
+\url{https://github.com/Finley-Maple/Death_Clock}.\end{sloppypar}
 
 \subsection{Main Results: Representation Axis}
 
@@ -93,11 +94,11 @@ S5 achieves the best calibration (IBS\,=\,0.1408) and strong mean TD-AUC
 (0.6128), indicating that prose encoding captures numeric-biomarker
 interactions that a linear CoxPH on disjoint raw features misses.
 
-\paragraph{Finding 3: Zero-shot inference has a calibration gap.}
-Delphi (S2) achieves C\,=\,0.6161 but substantially worse calibration
-(IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH variants).
-Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (Fig.~\ref{fig:horizon})
-rising to 0.65 at 19.7\,yr, suggesting chronic-disease priors that align
+\paragraph{Finding 3: Calibration gap of autoregressive generation.}
+Delphi (S2) achieves C\,=\,0.6161 but calibration is substantially worse
+(IBS\,=\,0.185 vs.\ $\approx$0.141 for CoxPH variants).
+Its TD-AUC rises from 0.52 at 9.5\,yr to 0.65 at 19.7\,yr
+(Fig.~\ref{fig:horizon}), suggesting chronic disease priors that align
 poorly with near-term acute mortality.
 
 \begin{figure}[ht]
@@ -183,7 +184,7 @@ statistical artefact.
 Second, the S4-vs-S3 contrast isolates temporal serialisation as the cause:
 for Qwen3-8B, $\Delta$C\,=\,$+$0.008 with CI\,=\,($+$0.005, $+$0.010),
 $p<0.001$.
-For BCB, the same contrast yields $\Delta$C\,=\,$+$0.001 — statistically
+For BCB, the same contrast yields $\Delta$C\,=\,$+$0.001, statistically
 detectable but practically negligible, suggesting that BCB's local
 attention patterns may partially capture ordinal structure from the prose
 format, reducing the benefit of explicit temporal decoupling.
@@ -217,7 +218,8 @@ Summation projects the embedding to 60 dimensions before adding raw
 features, discarding information orthogonal to the leading principal
 components; concatenation retains 64 independent embedding dimensions
 alongside all 60 raw features.
-Summation variants (0.584--0.596) fall below the S1 baseline (0.619),
-while concatenation variants (0.622--0.624) exceed it, making fusion
-strategy a more consequential choice than encoder selection.
+Summation variants (0.584--0.596) fall below the S1 baseline (0.619).
+Concatenation variants span 0.616--0.624; S3·Qwen (0.616) falls marginally
+below S1, while the BCB and S4 variants (0.622--0.623) exceed it, making
+fusion strategy a more consequential choice than encoder selection.
 

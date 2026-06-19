@@ -15,8 +15,9 @@ C-index advantage over prose serialisation of identical events (bootstrap
 95\,\% CI: $+$0.005 to $+$0.010, $p<0.001$), while a Qwen3-8B prose
 embedding with no raw features matches a 39-feature CoxPH baseline,
 demonstrating implicit numeric precision in LLM representations.
-Encoder choice and fusion method are secondary: encoder changes C-index by
-$<$0.001, while concatenation outperforms summation by $+$0.028--$+$0.039.
+Encoder choice and fusion method are secondary: within each setting, encoder
+family changes C-index by at most 0.007 (and by only 0.001 in Setting~4),
+while concatenation outperforms summation by $+$0.028--$+$0.039.
 Autoregressive generation shows an inherent calibration gap in acute risk
 stratification, with near-chance near-term AUC (0.52 at 9.5\,yr) and
 substantially higher Brier score (IBS\,=\,0.185 vs.\ 0.141).

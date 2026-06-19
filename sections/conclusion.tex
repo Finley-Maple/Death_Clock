@@ -9,10 +9,9 @@ CoxPH survival head, we isolate which structural encoding choices drive
 prediction quality.
 
 Three findings stand out.
-First, \emph{temporal ordering is the primary discriminative structural
-property}: decoupled age--event encoding (Setting 4) outperforms prose
-serialisation of identical events by $+$0.008 C-index, regardless of
-encoder or fusion.
+First, \emph{temporal ordering is the critical structural property}:
+decoupled age--event encoding (Setting 4) outperforms prose serialisation
+of identical events by $+$0.008 C-index, regardless of encoder or fusion.
 Second, \emph{general-purpose LLMs implicitly encode numeric biomarker
 structure}: a Qwen3-8B prose embedding without any raw numeric features
 matches a fully supervised 39-feature CoxPH, with superior TD-AUC.
@@ -23,8 +22,8 @@ calibrated risk stratification.
 
 Together, these findings confirm that \emph{how} temporal structure is
 encoded matters more than which specific LLM encodes it, corroborated by
-both the encoder ablation (Bio\_ClinicalBERT matches Qwen3-8B on Settings 3
-and 4) and the fusion ablation (concatenation consistently outperforms
+both the encoder ablation (BCB matches Qwen3-8B on Settings 3 and 4) and
+the fusion ablation (concatenation consistently outperforms
 summation by $+$0.028--$+$0.039 C-index).
 Future work will explore fine-tuning with calibration-aware objectives,
 longer-context clinical encoders, and multimodal fusion of EHR embeddings
