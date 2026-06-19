@@ -23,6 +23,22 @@ trajectory.
 How temporal structure is encoded is the central design question this study
 investigates.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_0}
+  \caption{Prediction task overview.
+           (A) Three illustrative patient timelines from the UK Biobank
+           respiratory cohort ($n$=124,158).
+           Blue dots mark ICD-10 diagnosis events before the age-60
+           feature-extraction cutoff; a red cross indicates death, an open
+           circle indicates censoring.
+           (B) Illustrative model output: a CoxPH survival curve
+           $S(t\mid x)$ stratified by predicted risk group.
+           Evaluation metrics (C-index, TD-AUC, IBS) measure discrimination
+           and calibration of these curves on the held-out test set.}
+  \label{fig:task}
+\end{figure}
+
 Large language models (LLMs) have demonstrated impressive clinical knowledge
 and are increasingly applied to clinical prediction.
 Two distinct paradigms have emerged: \emph{autoregressive generation},
