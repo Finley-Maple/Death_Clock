@@ -274,7 +274,7 @@ class QwenEmbeddingExtractor:
 
         model_kwargs = {"trust_remote_code": True, **load_kw}
 
-        dtype_key = "dtype"
+        dtype_key = "torch_dtype"
         if self.config.device == "cuda":
             model_kwargs[dtype_key] = torch.float16
             if self.config.use_flash_attn:
@@ -286,7 +286,7 @@ class QwenEmbeddingExtractor:
                     logger.info("flash-attn not installed, using default attention")
             model_kwargs["device_map"] = "auto"
         else:
-            model_kwargs[dtype_key] = torch.float32
+            model_kwargs["torch_dtype"] = torch.float32
 
         self.model = AutoModel.from_pretrained(
             self.config.model_name, **model_kwargs

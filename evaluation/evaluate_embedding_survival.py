@@ -69,28 +69,39 @@ def evaluate_embeddings(args):
     embeddings = load_embeddings(Path(args.embedding_dir), args.tag)
     print(f"  Loaded {len(embeddings)} embeddings")
 
-    combined_matrices = {}
-    emb_cov = {}
-    for split, matrix in matrices.items():
-        combined, cov = survival_eval.merge_with_embeddings(matrix, embeddings)
-        combined_matrices[split] = combined
-        emb_cov[split] = cov
+    if args.fusion == "sum":
+        if args.baseline_mode == "none":
+            raise ValueError("--fusion sum requires --baseline-mode != none "
+                             "(summation needs a raw feature block to add to).")
+        print(f"Fusing by summation (proj_dim={args.proj_dim or 'baseline-width'})...")
+        combined_matrices, emb_block_width, emb_cov = survival_eval.fuse_by_summation(
+            matrices, embeddings, proj_dim=args.proj_dim,
+        )
+        # Already projected + standardized + summed -> plain matrix, no further PCA.
+        pca_components, emb_block_width = None, None
+    else:
+        combined_matrices = {}
+        emb_cov = {}
+        for split, matrix in matrices.items():
+            combined, cov = survival_eval.merge_with_embeddings(matrix, embeddings)
+            combined_matrices[split] = combined
+            emb_cov[split] = cov
+        # emb_block_width: embedding dims come first in the combined [emb | baseline]
+        # matrix. Pass this so PCA is applied only to the embedding block.
+        sample_emb = next(iter(embeddings.values()))
+        emb_block_width = int(np.asarray(sample_emb).ravel().shape[0]) if args.baseline_mode != "none" else None
+        pca_components = args.pca_components
 
-    print("Embedding coverage after merge:")
+    print("Embedding coverage after fusion:")
     for split, cov in emb_cov.items():
         print(f"  {split}: {cov}")
-
-    # emb_block_width: embedding dims come first in the combined [emb | baseline]
-    # matrix. Pass this so PCA is applied only to the embedding block.
-    sample_emb = next(iter(embeddings.values()))
-    emb_block_width = int(np.asarray(sample_emb).ravel().shape[0]) if args.baseline_mode != "none" else None
 
     cox_cfg = survival_eval.CoxConfig(
         penalizer=args.penalizer,
         l1_ratio=args.l1_ratio,
         fallback_penalizer=args.fallback_penalizer,
         fallback_l1_ratio=args.fallback_l1_ratio,
-        pca_components=args.pca_components,
+        pca_components=pca_components,
         emb_block_width=emb_block_width,
     )
 
@@ -107,6 +118,8 @@ def evaluate_embeddings(args):
         "embedding_dir": str(args.embedding_dir),
         "embedding_tag": args.tag,
         "baseline_mode": args.baseline_mode,
+        "fusion": args.fusion,
+        "proj_dim": args.proj_dim,
         "baseline_columns": baseline_cols,
         "baseline_coverage": baseline_cov,
         "embedding_coverage": emb_cov,
@@ -144,7 +157,16 @@ def main():
     parser.add_argument("--pca-components", type=int, default=64,
                         help="Reduce embeddings to this many PCA dims before CoxPH "
                              "(avoids hours-long fits with 1024+ dim embeddings). "
-                             "Set to 0 to disable PCA.")
+                             "Set to 0 to disable PCA. Ignored when --fusion=sum.")
+    parser.add_argument("--fusion", type=str, default="concat",
+                        choices=["concat", "sum"],
+                        help="How to combine embeddings with raw baseline features. "
+                             "'concat' (default): [emb_PCA | raw_baseline] -> CoxPH. "
+                             "'sum': project emb to baseline width, standardize both, "
+                             "element-wise add -> CoxPH. Requires --baseline-mode != none.")
+    parser.add_argument("--proj-dim", type=int, default=None,
+                        help="Latent dimension for summation fusion projection "
+                             "(default: baseline feature width). Only used when --fusion=sum.")
     parser.add_argument("--penalizer", type=float, default=0.1)
     parser.add_argument("--l1-ratio", type=float, default=0.5)
     parser.add_argument("--fallback-penalizer", type=float, default=1.0)

@@ -263,7 +263,7 @@ def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFra
             "test_auc_delong": None, "test_auc_ci": None,
         })
 
-    # Fusion
+    # Fusion (original method 6 — kept for backward compat)
     fusion = all_results.get("fusion")
     if fusion:
         f_test = extract_split_metrics(fusion, "test")
@@ -277,6 +277,39 @@ def build_comparison_table(all_results: Dict[str, Optional[Dict]]) -> pd.DataFra
             "val_mean_td_auc": f_val.get("mean_td_auc"),
             "notes": str(fusion.get("metadata", {}).get("emb_block_width", "")),
             "test_auc_delong": None, "test_auc_ci": None,
+        })
+
+    # ── 5-setting framework: new ablation cells ──────────────────────────────
+    # Maps internal result-key → display method name for the comparison table.
+    NEW_CELL_LABELS = {
+        "s3_qwen_concat": "S3 · Qwen3-8B · concat",
+        "s3_qwen_sum":    "S3 · Qwen3-8B · sum",
+        "s3_bcb_concat":  "S3 · BCB · concat",
+        "s3_bcb_sum":     "S3 · BCB · sum",
+        "s4_qwen_concat": "S4 · Qwen3-8B · concat",
+        "s4_qwen_sum":    "S4 · Qwen3-8B · sum",
+        "s4_bcb_concat":  "S4 · BCB · concat",
+        "s4_bcb_sum":     "S4 · BCB · sum",
+        "s5_qwen":        "S3-Full · Qwen3-8B",
+        "s5_bcb":         "S3-Full · BCB",
+    }
+    for cell_key, cell_label in NEW_CELL_LABELS.items():
+        cell_result = all_results.get(cell_key)
+        if not cell_result:
+            continue
+        c_test = extract_split_metrics(cell_result, "test")
+        c_val  = extract_split_metrics(cell_result, "val")
+        meta = cell_result.get("metadata", {})
+        rows.append({
+            "method": cell_label,
+            "test_c_index": c_test.get("c_index"),
+            "test_mean_td_auc": c_test.get("mean_td_auc"),
+            "test_ibs": c_test.get("ibs"),
+            "val_c_index": c_val.get("c_index"),
+            "val_mean_td_auc": c_val.get("mean_td_auc"),
+            "notes": f"fusion={meta.get('fusion','concat')} emb={meta.get('embedding_dir','')}",
+            "test_auc_delong": None,
+            "test_auc_ci": None,
         })
 
     return pd.DataFrame(rows)
@@ -392,6 +425,7 @@ def run_unified_evaluation() -> pd.DataFrame:
         print(f"  Warning: Cohort split not found at {COHORT_SPLIT}")
 
     print("\nLoading method results...")
+    # ── Original 6-method results (kept for backward compatibility) ──────────
     all_results = {
         "delphi": load_delphi_results(),
         "delphi_cox": load_delphi_cox_results(),
@@ -401,6 +435,27 @@ def run_unified_evaluation() -> pd.DataFrame:
         "biomarker_text": load_embedding_results("biomarker_text"),
         "fusion": _load_fusion_results(),
     }
+
+    # ── 12-cell matrix (5-setting framework) ────────────────────────────────
+    # Setting 1 = Benchmarking (CoxPH), Setting 2 = Delphi (already loaded above).
+    # New ablation cells via evaluate_embedding_survival.py:
+    new_cells = [
+        # Setting 3 — Isolated temporal prose
+        "s3_qwen_concat",   # Qwen3-8B + concat  (existing embeddings, new method-name)
+        "s3_qwen_sum",      # Qwen3-8B + summation fusion  (local, runs immediately)
+        "s3_bcb_concat",    # BioClinicalBERT + concat     (needs server GPU run)
+        "s3_bcb_sum",       # BioClinicalBERT + summation  (needs server GPU run)
+        # Setting 4 — Decoupled time & event (age encoding + token embedding)
+        "s4_qwen_concat",   # Qwen3-8B + concat  (existing embeddings, new method-name)
+        "s4_qwen_sum",      # Qwen3-8B + summation fusion  (local, runs immediately)
+        "s4_bcb_concat",    # BioClinicalBERT + concat     (needs server GPU run)
+        "s4_bcb_sum",       # BioClinicalBERT + summation  (needs server GPU run)
+        # S3-Full — Full clinical prose (standalone, no raw features)
+        "s5_qwen",          # Qwen3-8B only   (existing biomarker embeddings)
+        "s5_bcb",           # BioClinicalBERT  (needs server GPU run)
+    ]
+    for cell in new_cells:
+        all_results[cell] = load_embedding_results(cell)
 
     df = build_comparison_table(all_results)
     print_comparison_table(df)

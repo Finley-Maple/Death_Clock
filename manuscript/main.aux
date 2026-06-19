@@ -1,74 +1,99 @@
 \relax 
 \providecommand\hyper@newdestlabel[2]{}
-\providecommand\HyField@AuxAddToFields[1]{}
-\providecommand\HyField@AuxAddToCoFields[2]{}
-\@writefile{toc}{\contentsline {title}{Structured Clinical Representations for All-Cause Mortality Risk Stratification: A Multimodal Comparison on UK Biobank}{1}{chapter.1}\protected@file@percent }
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{toc}{\contentsline {title}{Temporal Structure for Mortality Risk Stratification: Evaluating Encoding Strategies Across LLM Paradigms on UK Biobank}{1}{chapter.1}\protected@file@percent }
 \@writefile{toc}{\authcount {1}}
 \@writefile{toc}{\contentsline {author}{[Authors]}{1}{chapter.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \citation{delphi2024}
+\citation{llmehrenc,serialehr}
+\citation{ukbmdrmf}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Prediction task overview. (A) Three illustrative patient timelines from the UK Biobank respiratory cohort ($n$=124,158). Blue dots mark ICD-10 diagnosis events before the age-60 feature-extraction cutoff; a red cross indicates death, an open circle indicates censoring. (B) Illustrative model output: a CoxPH survival curve $S(t\mid x)$ stratified by predicted risk group. Evaluation metrics (C-index, TD-AUC, IBS) measure discrimination and calibration of these curves on the held-out test set.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:task}{{1}{2}{Prediction task overview. (A) Three illustrative patient timelines from the UK Biobank respiratory cohort ($n$=124,158). Blue dots mark ICD-10 diagnosis events before the age-60 feature-extraction cutoff; a red cross indicates death, an open circle indicates censoring. (B) Illustrative model output: a CoxPH survival curve $S(t\mid x)$ stratified by predicted risk group. Evaluation metrics (C-index, TD-AUC, IBS) measure discrimination and calibration of these curves on the held-out test set}{figure.1}{}}
 \citation{coxph_original}
 \citation{harrellcindex}
 \citation{deephit}
+\citation{deepsurv}
+\citation{ukbmdrmf}
+\citation{doctorai}
+\citation{retain}
+\citation{behrt}
+\citation{medbert}
+\citation{cehrbert}
+\citation{time2vec}
 \citation{delphi2024}
-\citation{ukbiobank}
+\citation{llmehrenc,serialehr}
+\citation{harutyunyan2019}
+\citation{llmehrenc}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{3}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Survival Analysis with Clinical Features}{3}{subsection.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}LLM-Based Clinical Prediction}{3}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Structured Multimodal Clinical Representations}{3}{subsection.2.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces How the five input settings encode temporal information differently. (A)~Setting 2 (Delphi): age is fused additively into the token embedding via a learned sinusoidal positional encoding; temporal ordering is preserved but exact inter-event duration is implicit. (B)~Settings 3 and 5 (Prose): age appears as a text scalar (\textit  {``at age 44.0''}) — invisible as geometry to the encoder's attention. (C)~Setting 4 (Trajectory): age and ICD event are encoded in \emph  {separate} streams (128-dim sinusoidal age encoding; text encoder for the ICD token), then concatenated per event and mean-pooled. The inset heatmap shows the 128-dim sinusoidal age encoding for ages 20--60, confirming explicit geometric separation between events at different life stages.}}{4}{figure.1}\protected@file@percent }
-\newlabel{fig:input_formats}{{1}{4}{How the five input settings encode temporal information differently. (A)~Setting 2 (Delphi): age is fused additively into the token embedding via a learned sinusoidal positional encoding; temporal ordering is preserved but exact inter-event duration is implicit. (B)~Settings 3 and 5 (Prose): age appears as a text scalar (\textit {``at age 44.0''}) — invisible as geometry to the encoder's attention. (C)~Setting 4 (Trajectory): age and ICD event are encoded in \emph {separate} streams (128-dim sinusoidal age encoding; text encoder for the ICD token), then concatenated per event and mean-pooled. The inset heatmap shows the 128-dim sinusoidal age encoding for ages 20--60, confirming explicit geometric separation between events at different life stages}{figure.1}{}}
+\citation{ukbiobank}
+\citation{ukbmdrmf}
+\citation{delphi2024}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Methods}{4}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Dataset and Cohort}{4}{subsection.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Experimental Design}{4}{subsection.3.2}\protected@file@percent }
 \newlabel{sec:design}{{3.2}{4}{Experimental Design}{subsection.3.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Axis A — Input Representation (5 settings).}{4}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Input Representation (5 settings).}{4}{section*.2}\protected@file@percent }
+\citation{vaswani2017attention}
 \citation{delphi2024}
 \citation{qwen3}
 \citation{bioclinicalbert}
-\@writefile{toc}{\contentsline {paragraph}{Axis B — Encoder Architecture (Settings 3--5).}{5}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Axis C — Feature Fusion (Settings 3--4 only).}{5}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Encoder Architecture (Settings 3, 3-Full, and 4).}{5}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Feature Fusion (Settings 3--4 only).}{5}{section*.4}\protected@file@percent }
 \citation{harrellcindex}
 \@writefile{toc}{\contentsline {paragraph}{Resulting experiment matrix.}{6}{section*.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Experiment matrix. Settings 1 and 2 have no encoder or fusion axis. BCB = Bio\_ClinicalBERT. Cells marked $\star $ require GPU embedding runs on the RTX 3090.}}{6}{table.1}\protected@file@percent }
-\newlabel{tab:matrix}{{1}{6}{Experiment matrix. Settings 1 and 2 have no encoder or fusion axis. BCB = Bio\_ClinicalBERT. Cells marked $\star $ require GPU embedding runs on the RTX 3090}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Evaluation Protocol}{6}{subsection.3.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Architecture overview. Patient data is separated into five modalities and routed through three axes: (A) five input representations (see also Fig.~\ref {fig:input_formats} for a detailed comparison of temporal encoding strategies), (B) two encoder architectures for settings 3--5, and (C) two fusion methods for settings 3--4.}}{7}{figure.2}\protected@file@percent }
-\newlabel{fig:methods}{{2}{7}{Architecture overview. Patient data is separated into five modalities and routed through three axes: (A) five input representations (see also Fig.~\ref {fig:input_formats} for a detailed comparison of temporal encoding strategies), (B) two encoder architectures for settings 3--5, and (C) two fusion methods for settings 3--4}{figure.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments and Results}{7}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Implementation Details}{7}{subsection.4.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Test-set survival prediction per setting (reference configuration). Best values in \textbf  {bold}. $\uparrow $ higher is better; $\downarrow $ lower is better.}}{8}{table.2}\protected@file@percent }
-\newlabel{tab:main}{{2}{8}{Test-set survival prediction per setting (reference configuration). Best values in \textbf {bold}. $\uparrow $ higher is better; $\downarrow $ lower is better}{table.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Main Results: Representation Axis}{8}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Finding 1 --- Temporal ordering is the critical structural property.}{8}{section*.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Finding 2 --- LLMs can encode numeric structure from prose.}{8}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Finding 3 --- Zero-shot inference has a calibration gap.}{8}{section*.8}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces TD-AUC by prediction horizon on the test set (reference configurations).}}{9}{table.3}\protected@file@percent }
-\newlabel{tab:horizon}{{3}{9}{TD-AUC by prediction horizon on the test set (reference configurations)}{table.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Encoder ablation: Qwen3-8B vs.\ Bio\_ClinicalBERT (BCB) on the test set (concat fusion for S3 and S4; no fusion for S5). Pending cells await server embedding runs.}}{9}{table.4}\protected@file@percent }
-\newlabel{tab:encoder}{{4}{9}{Encoder ablation: Qwen3-8B vs.\ Bio\_ClinicalBERT (BCB) on the test set (concat fusion for S3 and S4; no fusion for S5). Pending cells await server embedding runs}{table.4}{}}
-\@writefile{toc}{\contentsline {paragraph}{Note on effect magnitudes.}{9}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Encoder Ablation (Axis B)}{9}{subsection.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Fusion Ablation (Axis C)}{9}{subsection.4.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Feature fusion ablation: concatenation vs.\ element-wise summation (Qwen3-8B encoder). Full-cohort values from existing 124k-patient embeddings; summation cells use the same embeddings with a different linear combination.}}{10}{table.5}\protected@file@percent }
-\newlabel{tab:fusion}{{5}{10}{Feature fusion ablation: concatenation vs.\ element-wise summation (Qwen3-8B encoder). Full-cohort values from existing 124k-patient embeddings; summation cells use the same embeddings with a different linear combination}{table.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{10}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Axis A: Temporal ordering drives the representation gap.}{10}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Axis A: LLMs encode numeric structure from prose.}{10}{section*.11}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Test-set performance for the five input-format settings (Axis A, reference configurations). (A) Harrell C-index with the cross-sectional baseline (S1) as dotted reference; (B) mean time-dependent AUC; (C) Integrated Brier Score; (D) TD-AUC by prediction horizon. All embedding variants use Qwen3-Embedding (8B) as the encoder and concatenation fusion where applicable.}}{11}{figure.3}\protected@file@percent }
-\newlabel{fig:results}{{3}{11}{Test-set performance for the five input-format settings (Axis A, reference configurations). (A) Harrell C-index with the cross-sectional baseline (S1) as dotted reference; (B) mean time-dependent AUC; (C) Integrated Brier Score; (D) TD-AUC by prediction horizon. All embedding variants use Qwen3-Embedding (8B) as the encoder and concatenation fusion where applicable}{figure.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Axis B: Encoder generalization (pending).}{11}{section*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Axis C: Fusion method (pending).}{11}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments and Results}{6}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Implementation Details}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Main Results: Representation Axis}{6}{subsection.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Test-set results for all 12 experimental cells. Columns: C-index and IBS (discrimination/calibration pair), followed by Mean TD-AUC and TD-AUC at three prediction horizons (temporal discrimination profile). Best value per column in \textbf  {bold} ($\uparrow $ higher is better; $\downarrow $ lower is better). Shaded rows are reference configurations. $^\dagger $S3-Full·BCB affected by 512-token truncation (see Sec.~\ref {sec:encoder}).}}{7}{table.1}\protected@file@percent }
+\newlabel{tab:full}{{1}{7}{Test-set results for all 12 experimental cells. Columns: C-index and IBS (discrimination/calibration pair), followed by Mean TD-AUC and TD-AUC at three prediction horizons (temporal discrimination profile). Best value per column in \textbf {bold} ($\uparrow $ higher is better; $\downarrow $ lower is better). Shaded rows are reference configurations. $^\dagger $S3-Full·BCB affected by 512-token truncation (see Sec.~\ref {sec:encoder})}{table.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Finding 1: Temporal ordering is the critical structural property.}{7}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Finding 2: LLMs can encode numeric structure from prose.}{7}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Finding 3: Calibration gap of autoregressive generation.}{7}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Note on effect magnitudes.}{8}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Bootstrap Confidence Intervals}{8}{subsection.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces C-index point estimates and bootstrap 95\% CIs on the test set (n\,=\,18{,}623). Per-method intervals are derived from paired bootstrap and share the same resample indices. $^\dagger $S3-Full·BCB is affected by BCB's 512-token truncation (Sec.~\ref {sec:encoder}).}}{8}{table.2}\protected@file@percent }
+\newlabel{tab:boot_ci}{{2}{8}{C-index point estimates and bootstrap 95\% CIs on the test set (n\,=\,18{,}623). Per-method intervals are derived from paired bootstrap and share the same resample indices. $^\dagger $S3-Full·BCB is affected by BCB's 512-token truncation (Sec.~\ref {sec:encoder})}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Pairwise C-index contrasts with paired bootstrap 95\% CIs. $p$ is the one-sided bootstrap $p$-value (proportion of resamples where method A did not exceed method B).}}{9}{table.3}\protected@file@percent }
+\newlabel{tab:boot_contrasts}{{3}{9}{Pairwise C-index contrasts with paired bootstrap 95\% CIs. $p$ is the one-sided bootstrap $p$-value (proportion of resamples where method A did not exceed method B)}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Ablation Studies: Encoder and Fusion}{9}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:encoder}{{4.4}{9}{Ablation Studies: Encoder and Fusion}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Encoder architecture.}{9}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Feature fusion.}{9}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{9}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Temporal ordering drives the representation gap.}{9}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Setting~3-Full: LLMs encode numeric biomarker structure from prose.}{10}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Encoder and fusion ablations.}{10}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Calibration gap of autoregressive generation.}{10}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{11}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{11}{section.6}\protected@file@percent }
 \bibstyle{splncs04}
 \bibdata{references}
-\@writefile{toc}{\contentsline {paragraph}{Calibration gap of zero-shot inference.}{12}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Limitations.}{12}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{12}{section.6}\protected@file@percent }
 \bibcite{bioclinicalbert}{1}
 \bibcite{ukbiobank}{2}
-\bibcite{coxph_original}{3}
-\bibcite{harrellcindex}{4}
-\bibcite{deephit}{5}
-\bibcite{delphi2024}{6}
-\bibcite{qwen3}{7}
-\gdef \@abspage@last{13}
+\bibcite{retain}{3}
+\bibcite{doctorai}{4}
+\bibcite{coxph_original}{5}
+\bibcite{harrellcindex}{6}
+\bibcite{harutyunyan2019}{7}
+\bibcite{ukbmdrmf}{8}
+\bibcite{deepsurv}{9}
+\bibcite{time2vec}{10}
+\bibcite{llmehrenc}{11}
+\bibcite{deephit}{12}
+\bibcite{behrt}{13}
+\bibcite{cehrbert}{14}
+\bibcite{medbert}{15}
+\bibcite{delphi2024}{16}
+\bibcite{serialehr}{17}
+\bibcite{qwen3}{18}
+\bibcite{vaswani2017attention}{19}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Overview of the five experimental settings and their encoding pipelines. \textbf  {S1 (Baseline CoxPH)}: raw features are first passed through a preprocessing step that performs discretisation and standardisation to extract a 39-dimensional numeric vector, which is then fed directly to CoxPH. \textbf  {S2 (Delphi)}: age-tagged ICD tokens are fed to a GPT-based generative transformer in zero-shot mode. \textbf  {S3 Prose}: disease history is serialised as natural-language sentences and encoded by a frozen LLM; the resulting embedding is fused with raw features via concatenation. \textbf  {S3-Full (Full Prose)}: all modalities, including demographics, lab values with units, comorbidity flags, and chronological disease history, are combined into a single clinical paragraph and encoded by the LLM with no raw features concatenated at evaluation time. \textbf  {S4}: age values are mapped to a continuous sinusoidal encoding in parallel with ICD token embeddings; the two streams are concatenated per event, mean-pooled, and fused with raw features.}}{14}{figure.2}\protected@file@percent }
+\newlabel{fig:overview}{{2}{14}{Overview of the five experimental settings and their encoding pipelines. \textbf {S1 (Baseline CoxPH)}: raw features are first passed through a preprocessing step that performs discretisation and standardisation to extract a 39-dimensional numeric vector, which is then fed directly to CoxPH. \textbf {S2 (Delphi)}: age-tagged ICD tokens are fed to a GPT-based generative transformer in zero-shot mode. \textbf {S3 Prose}: disease history is serialised as natural-language sentences and encoded by a frozen LLM; the resulting embedding is fused with raw features via concatenation. \textbf {S3-Full (Full Prose)}: all modalities, including demographics, lab values with units, comorbidity flags, and chronological disease history, are combined into a single clinical paragraph and encoded by the LLM with no raw features concatenated at evaluation time. \textbf {S4}: age values are mapped to a continuous sinusoidal encoding in parallel with ICD token embeddings; the two streams are concatenated per event, mean-pooled, and fused with raw features}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Reference-configuration results for the five input-format settings. (A) Harrell C-index; (B) Integrated Brier Score (lower is better); (C) Mean TD-AUC. The dotted line marks the S1 CoxPH baseline value in each panel. All embedding settings use Qwen3-8B with concatenation fusion where applicable.}}{15}{figure.3}\protected@file@percent }
+\newlabel{fig:ref_bars}{{3}{15}{Reference-configuration results for the five input-format settings. (A) Harrell C-index; (B) Integrated Brier Score (lower is better); (C) Mean TD-AUC. The dotted line marks the S1 CoxPH baseline value in each panel. All embedding settings use Qwen3-8B with concatenation fusion where applicable}{figure.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces TD-AUC by prediction horizon for the five reference configurations. Delphi (S2) rises from near-chance (0.52) at 9.5\,yr to peak (0.65) at 19.7\,yr, while CoxPH-based settings show a comparatively flat profile across horizons.}}{15}{figure.4}\protected@file@percent }
+\newlabel{fig:horizon}{{4}{15}{TD-AUC by prediction horizon for the five reference configurations. Delphi (S2) rises from near-chance (0.52) at 9.5\,yr to peak (0.65) at 19.7\,yr, while CoxPH-based settings show a comparatively flat profile across horizons}{figure.4}{}}
+\gdef \@abspage@last{15}

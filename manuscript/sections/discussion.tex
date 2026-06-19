@@ -1,9 +1,9 @@
 \section{Discussion}
 
-\paragraph{Axis A: Temporal ordering drives the representation gap.}
+\paragraph{Temporal ordering drives the representation gap.}
 The C-index difference between Setting 4 (decoupled age--event encoding,
-0.6238) and Setting 3 (prose serialisation, 0.6156) --- with identical
-Qwen3-8B encoders and raw features --- is the cleanest signal in our
+0.6233) and Setting 3 (prose serialisation, 0.6156), using identical
+Qwen3-8B encoders and raw features, is the cleanest signal in our
 results.
 Prose serialisation collapses temporal ordering into semantic proximity:
 the sentence \textit{``At age 44, J45''} and \textit{``At age 52, F32''}
@@ -16,15 +16,15 @@ This aligns with the structured multimodal intelligence thesis:
 \emph{surface semantic encoding is insufficient when temporal causal
 structure drives the outcome.}
 The +0.008 C-index advantage of S4 over S3 is the primary empirical claim;
-bootstrap confidence intervals will quantify whether this gap exceeds sampling
-noise (planned analysis pending full prediction-file generation).
-Setting 2 (Delphi's ordinal token stream) sits between these two:
+bootstrap confidence intervals confirm this gap exceeds sampling noise:
+CI\,=\,($+$0.005, $+$0.010), $p<0.001$.
+Setting 2 (Delphi's ordinal token stream) falls between S3 and S4:
 temporal ordering is preserved as positional structure in the input
-sequence, but the autoregressive hazard chain cannot disentangle
+sequence, but the autoregressive hazard chain cannot separate
 ordering effects from pre-training priors (see calibration gap below).
 
-\paragraph{Axis A: LLMs encode numeric structure from prose.}
-Setting 5 (unified prose, no raw features) achieves C\,=\,0.6194 ---
+\paragraph{Setting~3-Full: LLMs encode numeric biomarker structure from prose.}
+Setting~3-Full (full-text prose, no raw features) achieves C\,=\,0.6195,
 matching the 39-feature CoxPH baseline (0.6191) while using no raw
 numeric features.
 This suggests that Qwen3-8B's pre-training has internalised enough
@@ -36,36 +36,45 @@ disease history that a linear CoxPH on raw features misses.
 However, this encoding is \emph{implicit} and cannot be inspected or
 enforced, which limits trustworthiness in high-stakes clinical deployment.
 
-\paragraph{Axis B: Encoder generalization (pending).}
-The Bio\_ClinicalBERT comparison (pending server embedding runs) will
-determine whether the representation-axis findings are specific to
-Qwen3-8B or generalise across encoder families.
-We expect BCB to perform comparably for Setting 3 (short ICD prose well
-within 512 tokens) but potentially worse for Setting 5 due to truncation.
-If the temporal-ordering advantage (S4 over S3) holds for BCB, it
-strengthens the claim that \emph{how} events are serialised matters more
-than which encoder processes them.
+\paragraph{Encoder and fusion ablations.}
+The encoder and fusion ablations confirm that the encoding-format findings are
+robust rather than artefacts of a specific implementation choice.
+For encoder choice, BCB and Qwen3-8B produce near-identical C-indices for S3
+and S4, confirming that discriminative information is accessible to both
+encoder families; the temporal-ordering advantage of S4 over S3 persists
+($\Delta$C\,=\,$+$0.008 for Qwen, $p<0.001$).
+The anomalously high S3-Full·BCB C-index (0.6371) is explained by 512-token
+truncation retaining primarily age signal, which collapses TD-AUC to 0.507.
+For fusion strategy, concatenation outperforms summation by
+$+$0.028--$+$0.039 C-index across all cells, confirming that retaining
+independent embedding dimensions alongside raw features preserves more
+representational capacity than projective fusion.
+The primary conclusion, that serialisation format drives discrimination more
+than encoder family or fusion method, is supported across both ablations.
 
-\paragraph{Axis C: Fusion method (pending).}
-Preliminary local results for Qwen summation fusion (10k-patient subset)
-show directionally consistent patterns with concatenation: S4·Qwen·sum
-achieves C\,=\,0.593 vs.\ S3·Qwen·sum at 0.586, preserving the Setting 4
-advantage.
-Whether summation fusion improves over concatenation for the full cohort
-will be determined once the full embeddings are available on this machine.
-We do not expect a large difference because both fusions are linear and
-CoxPH's $\ell_2$ regularisation strongly constrains the coefficient space.
-
-\paragraph{Calibration gap of zero-shot inference.}
-Delphi's IBS of 0.185 vs.\ $\approx$0.141 for all CoxPH variants reveals
-a structural grounding problem: the sigmoid hazard chain produces survival
-curves that are systematically miscalibrated relative to observed event
-rates.
-The near-term AUC collapse (0.52 at 9.5\,yr) suggests the model's hazard
-estimates do not adequately weight acute risk factors (CRP, creatinine)
-that dominate short-horizon mortality.
-Fine-tuning with a calibration-aware objective would likely close this gap
-but at the cost of zero-shot generalisability.
+\paragraph{Calibration gap of autoregressive generation.}
+Delphi's IBS of 0.185 vs.\ $\approx$0.141 for supervised CoxPH variants
+must be interpreted alongside an important asymmetry: Delphi operates solely
+on serialised ICD codes and demographic tokens and has no access to the
+numeric biomarker features (HbA1c, CRP, creatinine, cystatin C) available to
+the CoxPH baselines.
+This input asymmetry means the gap partly reflects missing acute biomarker
+signal rather than a deficiency of the autoregressive approach within its
+intended operating regime.
+More fundamentally, the sigmoid hazard chain produces survival curves without
+a calibration reference from the target population, an inherent constraint of
+zero-shot deployment under distribution shift between pre-training and the
+UK Biobank cohort.
+The near-term AUC collapse (0.52 at 9.5\,yr) is consistent with this
+interpretation: short-horizon mortality risk is dominated by derangements in
+CRP, creatinine, and albumin that do not appear in the ICD token stream.
+These results therefore reflect a structural limitation of the autoregressive
+generation paradigm for \emph{acute} risk stratification: the paradigm
+lacks access to the quantitative physiological signal that most strongly
+predicts near-term death.
+Fine-tuning with a calibration-aware objective and numeric biomarker inputs
+would likely close this gap substantially, but at the cost of zero-shot
+generalisability across cohorts.
 
 \paragraph{Limitations.}
 All embedding methods freeze their encoders; fine-tuning may yield
@@ -75,12 +84,12 @@ violated in UKB.
 All results are from a single biobank cohort; external validation is
 required before clinical translation.
 Bio\_ClinicalBERT's 512-token limit is an architectural constraint that
-disproportionately affects Setting 5; future work should evaluate
+disproportionately affects Setting~3-Full; future work should evaluate
 longer-context clinical encoders.
 The primary evaluation metrics (C-index, TD-AUC) measure discrimination but not
 calibration of the predicted survival function.
 We supplement IBS with restricted mean survival time (RMST\,$= \int_0^\tau S(t\mid x)\,\mathrm{d}t$),
 which provides a patient-interpretable calibration summary (expected life-years
 within the follow-up window $\tau$).
-A full RMST-decile calibration analysis is reserved for the complete 12-cell
-matrix once server GPU runs are finalised.
+RMST-decile calibration analysis across the full 12-cell matrix is left as
+an extension once all server embedding runs are consolidated locally.

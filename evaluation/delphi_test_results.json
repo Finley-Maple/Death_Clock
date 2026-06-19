@@ -1,0 +1,36 @@
+{
+  "method": "delphi",
+  "split": "test",
+  "risk_strategy": "sigmoid_hazard_chain",
+  "horizons": [
+    3471,
+    5620,
+    7213
+  ],
+  "splits": {
+    "test": {
+      "c_index": 0.6161014918148808,
+      "c_index_ipcw": null,
+      "td_auc": {
+        "3471": 0.521856807820351,
+        "5620": 0.5862232014477147,
+        "7213": 0.648831504750973
+      },
+      "mean_td_auc": 0.5984081261217966,
+      "ibs": 0.18459555926435894,
+      "size": 18623,
+      "event_rate": 0.2619878644686678
+    }
+  },
+  "coverage": {
+    "expected": 18623,
+    "available": 18623,
+    "coverage": 1.0,
+    "missing_count": 0,
+    "missing_examples": [],
+    "missing_predictions": []
+  },
+  "death_token_ids": [
+    1269
+  ]
+}

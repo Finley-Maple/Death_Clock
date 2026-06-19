@@ -1,41 +1,26 @@
 \begin{abstract}
-Accurate mortality risk stratification from electronic health records (EHR)
-requires models that reason over temporal disease trajectories, numeric
-biomarkers, and demographic context.
-It remains unclear whether large language models (LLMs) can encode the
-\emph{structural} properties of clinical data --- numeric precision,
-temporal ordering, and causal relationships --- required for calibrated
-survival prediction.
-
-We present a controlled three-axis study on UK Biobank
-($n\,=\,124{,}158$; 18{,}623 test) that systematically varies:
-(A) \emph{input representation} across five temporal-encoding settings
-(cross-sectional, sequential ordinal, isolated prose, decoupled time and
-event, and unified summary prose);
-(B) \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT) for the
-three embedding-based settings; and
-(C) \emph{feature fusion method} (concatenation vs.\ element-wise
-summation) for settings that combine embeddings with raw features.
-All embedding variants use a uniform Cox proportional hazards head,
-enabling direct comparison of structural encoding choices.
-
-Three key findings emerge from our 12-cell experiment matrix.
-First, \emph{temporal ordering is the critical structural property}:
-decoupled age--event encoding (Setting 4) achieves the best Harrell
-C-index (0.624, $+$0.005 over the CoxPH baseline and $+$0.008 over prose
-serialisation of the same events).
-Second, \emph{LLMs can encode numeric biomarker structure from prose}: a
-Qwen3-8B embedding of full clinical prose with no raw numeric features
-matches the 39-feature CoxPH baseline (C\,=\,0.619 vs.\ 0.619) and
-achieves superior TD-AUC.
-Third, \emph{zero-shot autoregressive inference has a structural calibration
-gap}: Delphi shows poor near-term AUC (0.52 at 9.5\,yr) and substantially
-worse calibration (IBS\,=\,0.185 vs.\ 0.141) despite competitive long-horizon
-discrimination.
-These results establish a reproducible benchmark and suggest that
-\emph{how} temporal structure is encoded may matter more than which specific
-LLM encodes it --- a hypothesis the pending encoder-generalisation results
-(Bio\_ClinicalBERT) will test.
+Accurate mortality risk stratification from electronic health records demands
+models that reason over longitudinal disease trajectories, numeric biomarkers,
+and demographic context.
+The central design question is \emph{how temporal structure should be encoded}:
+does explicit geometric separation of events in time improve survival
+discrimination over prose serialisation?
+We present a five-setting controlled study on a UK Biobank respiratory disease
+subgroup ($n\,{=}\,124{,}158$), systematically varying input representation
+from cross-sectional bag-of-features to unified clinical prose, with encoder
+and fusion ablations across 12 experimental cells.
+Our main finding is that temporal ordering is the critical structural property:
+decoupled age--event sinusoidal encoding (Setting~4) achieves a $+$0.008
+C-index advantage over prose serialisation of identical events (bootstrap
+95\,\% CI: $+$0.005 to $+$0.010, $p<0.001$), while a Qwen3-8B prose
+embedding with no raw features matches a 39-feature CoxPH baseline,
+demonstrating implicit numeric precision in LLM representations.
+Encoder choice and fusion method are secondary: within each setting, encoder
+family changes C-index by at most 0.007 (and by only 0.001 in Setting~4),
+while concatenation outperforms summation by $+$0.028--$+$0.039.
+Autoregressive generation shows an inherent calibration gap in acute risk
+stratification, with near-chance near-term AUC (0.52 at 9.5\,yr) and
+substantially higher Brier score (IBS\,=\,0.185 vs.\ 0.141).
 \keywords{survival analysis \and LLM embeddings \and EHR \and
-          UK Biobank \and structured multimodal intelligence}
+          UK Biobank \and temporal encoding}
 \end{abstract}

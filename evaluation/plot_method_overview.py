@@ -14,6 +14,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 
+plt.rcParams.update({'font.family': 'serif', 'font.serif': ['Times New Roman']})
+
 os.makedirs("figures", exist_ok=True)
 
 # ── Canvas ─────────────────────────────────────────────────────────────────────
@@ -95,22 +97,14 @@ def row_lbl(y_ctr, text):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Figure title
-# ═══════════════════════════════════════════════════════════════════════════════
-ax.text(FW / 2, 18.5,
-        "UK Biobank Cohort — Comparative Methodological Pipeline",
-        ha="center", va="center",
-        fontsize=18, fontweight="bold", color=DARK_T)
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Method column headers
 # ═══════════════════════════════════════════════════════════════════════════════
 TITLES = [
     "Delphi\n(Zero-shot LLM)",
     "Baseline\nCoxPH",
-    "Disease Text\nEmb + CoxPH",
-    "Trajectory\nEmb + CoxPH",
-    "Clinical\nSummary Emb",
+    "S3 Prose\nEmb + CoxPH",
+    "S4 Trajectory\nEmb + CoxPH",
+    "S3-Full\nFull Prose",
 ]
 for i, (cx, t) in enumerate(zip(COL_X, TITLES)):
     box(cx, Y_HDR, COL_W, H_HDR, t,

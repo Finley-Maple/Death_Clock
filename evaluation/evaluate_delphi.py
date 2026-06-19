@@ -442,6 +442,19 @@ def evaluate_delphi(args):
         coverage = data_access.coverage_report(split_eids, aligned_eids)
         coverage["missing_predictions"] = missing_preds[:5]
 
+        if getattr(args, "save_preds", False):
+            preds_dir = Path(getattr(args, "preds_dir", str(output_dir / "predictions")))
+            preds_dir.mkdir(parents=True, exist_ok=True)
+            out_npz = preds_dir / f"s2_delphi_{split}_preds.npz"
+            np.savez_compressed(
+                str(out_npz),
+                eids=np.array(aligned_eids, dtype=np.int64),
+                risk_scores=aligned_risk.astype(np.float64),
+                durations=durations.astype(np.float64),
+                events=events.astype(np.int32),
+            )
+            print(f"  [save_preds] Saved {split} predictions to {out_npz}")
+
         all_results[split] = {"metrics": split_metrics, "coverage": coverage}
         print(f"  C-index={split_metrics.get('c_index', 'N/A')}  "
               f"IBS={split_metrics.get('ibs') or 'N/A'}")
@@ -485,7 +498,9 @@ def main():
     parser.add_argument("--horizons-days", type=int, nargs="*", default=None,
                         help="Optional explicit evaluation horizons in days.")
     parser.add_argument("--save-preds", action="store_true",
-                        help="If set, save risk predictions to output/predictions.")
+                        help="If set, save risk predictions to --preds-dir.")
+    parser.add_argument("--preds-dir", type=str, default=None,
+                        help="Directory for per-split prediction npz files (default: <output-dir>/predictions).")
     parser.add_argument(
         "--splits", type=str, nargs="+",
         choices=["train", "val", "test"],

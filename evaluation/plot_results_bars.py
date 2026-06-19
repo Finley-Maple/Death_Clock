@@ -16,6 +16,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.family': 'serif', 'font.serif': ['Times New Roman']})
+
 os.makedirs("figures", exist_ok=True)
 
 # ── Colour palette (consistent with plot_comparison.py) ──────────────────────
@@ -24,7 +26,7 @@ COLORS = {
     "S2": "#5B8DB8",
     "S3": "#E07B54",
     "S4": "#4C9B8E",
-    "S5": "#7B5EA7",
+    "S3F": "#7B5EA7",
 }
 
 # ── Reference configuration data sources ─────────────────────────────────────
@@ -46,14 +48,14 @@ REF_CONFIGS = [
         "file":        "embedding_results/s3_qwen_concat_results.json",
     },
     {
+        "label":       "S3-Full",
+        "color":       COLORS["S3F"],
+        "file":        "embedding_results/s5_qwen_results.json",
+    },
+    {
         "label":       "S4 Decoupled",
         "color":       COLORS["S4"],
         "file":        "embedding_results/s4_qwen_concat_results.json",
-    },
-    {
-        "label":       "S5 Unified",
-        "color":       COLORS["S5"],
-        "file":        "embedding_results/s5_qwen_results.json",
     },
 ]
 
@@ -106,8 +108,6 @@ def bar_panel(ax, rows, field, ylabel, title, letter, lower_better=False):
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=9, rotation=25, ha="right")
     ax.set_ylabel(ylabel, fontsize=9)
-    arrow = "↓" if lower_better else "↑"
-    ax.set_title(f"{title}  ({arrow})", fontsize=9.5, fontweight="bold")
     ax.text(-0.15, 1.06, letter, transform=ax.transAxes,
             fontsize=13, fontweight="bold", va="top")
     ax.grid(axis="y", linestyle="--", alpha=0.35)
@@ -124,12 +124,6 @@ def main():
     bar_panel(axes[0], rows, "c_index",    "Harrell C-index",         "C-index",                "A")
     bar_panel(axes[1], rows, "ibs",        "Integrated Brier Score",  "IBS",                    "B", lower_better=True)
     bar_panel(axes[2], rows, "mean_tdauc", "Mean TD-AUC",             "Mean TD-AUC",            "C")
-
-    fig.suptitle(
-        "Reference-configuration results — 5 temporal-encoding settings\n"
-        "(UK Biobank respiratory cohort, test n = 18,623)",
-        fontsize=10, y=1.02,
-    )
 
     for ext in ("png", "pdf"):
         out = f"figures/figure_2a.{ext}"

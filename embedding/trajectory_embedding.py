@@ -90,11 +90,14 @@ class TokenEmbedder:
     """
     Embeds disease/event tokens.
 
-    Two modes:
-      - qwen: use QwenEmbeddingExtractor to embed each unique token string.
-      - random: fixed random embeddings per unique token (for testing).
+    Supported modes:
+      - ``random``      : fixed random embeddings per unique token (fast, for testing).
+      - ``qwen``        : embed via a QwenEmbeddingExtractor instance.
+      - ``bioclinbert`` : embed via a ClinicalBertExtractor instance.
+      - ``extractor``   : generic — any object with an ``extract_embedding(text) -> np.ndarray``
+                          method.  Pass the object as ``token_extractor``.
 
-    Embeddings are cached so each unique token is embedded only once.
+    Embeddings are cached so each unique token string is embedded only once.
     """
 
     def __init__(
@@ -102,12 +105,19 @@ class TokenEmbedder:
         mode: str = "random",
         token_dim: int = 128,
         cache_path: Optional[Path] = None,
+        # Unified extractor argument (replaces the old qwen_extractor kwarg).
+        # Accepts any extractor that implements extract_embedding(text) -> np.ndarray.
+        token_extractor=None,
+        # Legacy alias kept for backwards compatibility.
         qwen_extractor=None,
     ):
         self.mode = mode
         self.token_dim = token_dim
         self.cache: Dict[str, np.ndarray] = {}
-        self.qwen_extractor = qwen_extractor
+        # Prefer the generic name; fall back to the legacy kwarg.
+        self.token_extractor = token_extractor or qwen_extractor
+        # Backwards-compat attribute so old code accessing .qwen_extractor still works.
+        self.qwen_extractor = self.token_extractor
 
         if cache_path and cache_path.exists():
             data = np.load(cache_path, allow_pickle=True)
@@ -118,11 +128,13 @@ class TokenEmbedder:
         if token in self.cache:
             return self.cache[token]
 
-        if self.mode == "qwen":
-            if self.qwen_extractor is None:
-                raise RuntimeError("Qwen extractor not provided for mode='qwen'")
-            emb = self.qwen_extractor.extract_embedding(token)
-            # Use full Qwen embedding; update token_dim to match on first call
+        if self.mode in ("qwen", "bioclinbert", "extractor"):
+            if self.token_extractor is None:
+                raise RuntimeError(
+                    f"A token_extractor must be provided for mode='{self.mode}'."
+                )
+            emb = self.token_extractor.extract_embedding(token)
+            # Lazily update token_dim to match the extractor's native dim.
             if self.token_dim != emb.shape[0]:
                 self.token_dim = emb.shape[0]
         elif self.mode == "random":
@@ -185,19 +197,31 @@ class TrajectoryEmbeddingPipeline:
         token_mode: str = "random",
         pooling: str = "mean",
         cache_path: Optional[Path] = None,
-        qwen_extractor=None,
+        # Generic extractor (accepts any object with extract_embedding(text) -> np.ndarray).
+        # Replaces qwen_extractor; the old kwarg is kept for backwards compatibility.
+        token_extractor=None,
+        qwen_extractor=None,  # legacy alias
     ):
         self.age_encoder = AgeEncoder(n_embd=age_dim)
         self.token_embedder = TokenEmbedder(
             mode=token_mode, token_dim=token_dim,
-            cache_path=cache_path, qwen_extractor=qwen_extractor,
+            cache_path=cache_path,
+            token_extractor=token_extractor or qwen_extractor,
         )
         self.pooling = pooling
-        self.output_dim = age_dim + token_dim  # updated lazily on first Qwen call
+        # NOTE: do not read self.output_dim directly — use the property below.
+        # The token_dim is resized lazily on the first extractor call (for
+        # bioclinbert/qwen modes), so any pre-construction value would be stale.
 
     @property
-    def _output_dim(self) -> int:
+    def output_dim(self) -> int:
+        """Actual output dimension (updated after first embed call for extractor modes)."""
         return self.age_encoder.n_embd + self.token_embedder.token_dim
+
+    # Legacy alias — kept so old code that used the private form still works.
+    @property
+    def _output_dim(self) -> int:
+        return self.output_dim
 
     def embed_patient(self, trajectory_text: str) -> np.ndarray:
         """
@@ -323,24 +347,31 @@ def main():
     parser.add_argument("--age-dim", type=int, default=128, help="Age embedding dimension.")
     parser.add_argument("--token-dim", type=int, default=128, help="Token embedding dimension.")
     parser.add_argument("--token-mode", type=str, default="random",
-                        choices=["random", "qwen"], help="How to embed tokens.")
+                        choices=["random", "qwen", "bioclinbert"],
+                        help="How to embed disease tokens: 'random' (testing/fast), "
+                             "'qwen' (Qwen3-Embedding family), 'bioclinbert' "
+                             "(Bio_ClinicalBERT; uses mean-pool, 768-dim).")
     parser.add_argument("--pooling", type=str, default="mean", choices=["mean", "max"])
     parser.add_argument("--token-cache", type=Path, default=None,
                         help="Path to cached token embeddings (.npz).")
     parser.add_argument("--text-col", type=str, default="trajectory_text")
     parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Embedding-0.6B",
-                        help="Qwen3-Embedding model name or local path (used when --token-mode=qwen).")
+                        help="Model name or local path (used when --token-mode=qwen).")
     args = parser.parse_args()
 
-    # Optionally initialize Qwen3-Embedding for token embedding
-    qwen_extractor = None
+    # Optionally initialize the token encoder
+    token_extractor = None
     if args.token_mode == "qwen":
         from qwen_embedding import QwenEmbeddingExtractor, EmbeddingConfig
         qwen_config = EmbeddingConfig(
             model_name=args.model_name,
-            normalize=True,  # L2-normalize token embeddings before mean-pooling
+            normalize=True,
         )
-        qwen_extractor = QwenEmbeddingExtractor(qwen_config)
+        token_extractor = QwenEmbeddingExtractor(qwen_config)
+    elif args.token_mode == "bioclinbert":
+        from clinical_bert_embedding import ClinicalBertExtractor, BertEmbeddingConfig
+        bcb_config = BertEmbeddingConfig(normalize=True)
+        token_extractor = ClinicalBertExtractor(bcb_config)
 
     pipeline = TrajectoryEmbeddingPipeline(
         age_dim=args.age_dim,
@@ -348,7 +379,7 @@ def main():
         token_mode=args.token_mode,
         pooling=args.pooling,
         cache_path=args.token_cache,
-        qwen_extractor=qwen_extractor,
+        token_extractor=token_extractor,
     )
 
     if args.input_csv:

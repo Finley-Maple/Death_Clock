@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 import numpy as np
 
+plt.rcParams.update({'font.family': 'serif', 'font.serif': ['Times New Roman']})
+
 # ── paths ──────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -77,12 +79,6 @@ def clean_spines(ax):
 def draw_panel_A(ax):
     col = MC[0]
     col_light = "#C8D5E8"
-
-    # ── panel title ────────────────────────────────────────────────────────────
-    ax.text(0.5, 0.97, "(A)  Setting 2: Delphi", ha="center", va="top",
-            fontsize=11, fontweight="bold", color=DARK_T, transform=ax.transAxes)
-    ax.text(0.5, 0.91, "Ordinal-token stream", ha="center", va="top",
-            fontsize=9.5, color=MID_T, style="italic", transform=ax.transAxes)
 
     # ── tokens ─────────────────────────────────────────────────────────────────
     tokens = ["44yr\nJ45", "52yr\nF32", "58yr\nE11", "···"]
@@ -159,12 +155,6 @@ def draw_panel_A(ax):
 def draw_panel_B(ax):
     col = MC[2]
     col_light = "#C6DDD4"
-
-    # ── panel title ────────────────────────────────────────────────────────────
-    ax.text(0.5, 0.97, "(B)  Setting 3/5: Prose", ha="center", va="top",
-            fontsize=11, fontweight="bold", color=DARK_T, transform=ax.transAxes)
-    ax.text(0.5, 0.91, "Text serialisation", ha="center", va="top",
-            fontsize=9.5, color=MID_T, style="italic", transform=ax.transAxes)
 
     # ── text block ────────────────────────────────────────────────────────────
     prose_lines = (
@@ -243,12 +233,6 @@ def draw_panel_B(ax):
 def draw_panel_C(ax, fig):
     col = MC[3]
     col_light = "#B8D5E0"
-
-    # ── panel title ────────────────────────────────────────────────────────────
-    ax.text(0.5, 0.97, "(C)  Setting 4: Trajectory", ha="center", va="top",
-            fontsize=11, fontweight="bold", color=DARK_T, transform=ax.transAxes)
-    ax.text(0.5, 0.91, "Decoupled age + event", ha="center", va="top",
-            fontsize=9.5, color=MID_T, style="italic", transform=ax.transAxes)
 
     # ── shared event rows ──────────────────────────────────────────────────────
     ages  = ["44.0", "52.0", "58.0"]

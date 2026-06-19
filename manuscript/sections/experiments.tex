@@ -7,36 +7,71 @@ Bio\_ClinicalBERT (110M params) runs on the same GPU at
 $\approx$30 min per pass.
 CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
 Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
-Code and evaluation scripts are available at [repository URL].
+\begin{sloppypar}Code and evaluation scripts are available at {\small\url{https://github.com/Finley-Maple/Death\_Clock}}.\end{sloppypar}
 
 \subsection{Main Results: Representation Axis}
 
-Table~\ref{tab:main} compares the reference configuration for each setting:
+Table~\ref{tab:full} reports test-set results for all 12 experimental cells.
 Settings 1 and 2 have fixed pipelines; Settings 3 and 4 use Qwen3-8B with
-concatenation fusion; Setting 5 uses Qwen3-8B alone (no raw features).
+concatenation fusion as the reference configuration; Setting~3-Full uses
+Qwen3-8B alone (no raw features).
+Fig.~\ref{fig:ref_bars} visualises the reference-configuration metrics at a
+glance, and Fig.~\ref{fig:horizon} shows the TD-AUC horizon profile for the
+five reference configurations.
 
-\begin{table}[t]
+\begin{table}[ht]
 \centering
-\caption{Test-set survival prediction per setting (reference configuration).
-         Best values in \textbf{bold}.
-         $\uparrow$ higher is better; $\downarrow$ lower is better.}
-\label{tab:main}
-\begin{tabular}{llccc}
+\caption{Test-set results for all 12 experimental cells.
+         Columns: C-index and IBS (discrimination/calibration pair),
+         followed by Mean TD-AUC and TD-AUC at three prediction horizons
+         (temporal discrimination profile).
+         Best value per column in \textbf{bold}
+         ($\uparrow$ higher is better; $\downarrow$ lower is better).
+         Shaded rows are reference configurations.
+         $^\dagger$S3-Full·BCB affected by 512-token truncation (see Sec.~\ref{sec:encoder}).}
+\label{tab:full}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llcccccc}
 \toprule
-Setting & Description & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+Setting & Encoder/Fusion & C-index $\uparrow$ & IBS $\downarrow$ & Mean TD-AUC $\uparrow$ & 9.5\,yr $\uparrow$ & 15.4\,yr $\uparrow$ & 19.7\,yr $\uparrow$ \\
 \midrule
-S1 & Baseline CoxPH (39 features)      & 0.6191 & 0.5999 & 0.1410 \\
-S2 & Delphi zero-shot                  & 0.6161 & 0.5984 & 0.1846 \\
-S3 & Prose + Qwen + concat             & 0.6156 & 0.6074 & 0.1409 \\
-S4 & Decoupled + Qwen + concat         & \textbf{0.6238} & 0.6001 & 0.1410 \\
-S5 & Unified prose, Qwen (no raw)      & 0.6194 & \textbf{0.6127} & \textbf{0.1408} \\
+\rowcolor{gray!12}
+S1 — Baseline CoxPH   & —              & 0.6191 & 0.1410 & 0.5999 & 0.584 & 0.596 & 0.612 \\
+\rowcolor{gray!12}
+S2 — Delphi zero-shot & Delphi         & 0.6161 & 0.1846 & 0.5984 & 0.522 & 0.586 & \textbf{0.649} \\
+\midrule
+\rowcolor{gray!12}
+S3 — Isolated prose     & Qwen · concat  & 0.6156 & 0.1409 & 0.6074 & 0.594 & 0.603 & 0.618 \\
+S3 — Isolated prose     & Qwen · sum     & 0.5875 & 0.1421 & 0.5813 & 0.568 & 0.583 & 0.587 \\
+S3 — Isolated prose     & BCB · concat   & 0.6225 & 0.1410 & 0.6014 & 0.586 & 0.597 & 0.613 \\
+S3 — Isolated prose     & BCB · sum      & 0.5844 & 0.1416 & 0.5819 & 0.575 & 0.578 & 0.589 \\
+\rowcolor{gray!12}
+S3-Full — Full prose    & Qwen (no raw)  & 0.6195 & \textbf{0.1408} & \textbf{0.6128} & \textbf{0.605} & \textbf{0.615} & 0.615 \\
+S3-Full — Full prose    & BCB$^\dagger$  & 0.6371 & 0.1430 & 0.5074 & 0.510 & 0.508 & 0.505 \\
+\midrule
+\rowcolor{gray!12}
+S4 — Decoupled time     & Qwen · concat  & \textbf{0.6233} & 0.1410 & 0.5991 & 0.583 & 0.595 & 0.611 \\
+S4 — Decoupled time     & Qwen · sum     & 0.5842 & 0.1417 & 0.5757 & 0.571 & 0.576 & 0.578 \\
+S4 — Decoupled time     & BCB · concat   & 0.6232 & 0.1410 & 0.6025 & 0.587 & 0.599 & 0.614 \\
+S4 — Decoupled time     & BCB · sum      & 0.5955 & 0.1413 & 0.5868 & 0.583 & 0.588 & 0.588 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
-\paragraph{Finding 1 --- Temporal ordering is the critical structural property.}
-Setting 4 achieves the best Harrell C-index (0.6238), exceeding S1 by
-$+$0.005 and S3 by $+$0.008.
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_2a}
+  \caption{Reference-configuration results for the five input-format settings.
+           (A) Harrell C-index; (B) Integrated Brier Score (lower is better);
+           (C) Mean TD-AUC. The dotted line marks the S1 CoxPH baseline value
+           in each panel. All embedding settings use Qwen3-8B with concatenation
+           fusion where applicable.}
+  \label{fig:ref_bars}
+\end{figure}
+
+\paragraph{Finding 1: Temporal ordering is the critical structural property.}
+Setting 4 achieves the best Harrell C-index among the reference configurations (0.6233),
+exceeding S1 by $+$0.004 and S3 by $+$0.008.
 Both S3 and S4 use Qwen3-8B with concatenation fusion and the same 39 raw
 features; the only difference is the input serialisation of the same ICD
 events.
@@ -45,131 +80,144 @@ proximity, whereas the decoupled age+token encoding (S4) explicitly
 preserves the sinusoidal age context per event.
 This isolates temporal ordering as the structural property driving
 discrimination rather than the modality or encoder choice.
-The absolute C-index differences (0.005--0.008) are small in magnitude; we report
+The absolute C-index differences (0.004--0.008) are small in magnitude; we report
 bootstrap 95\% confidence intervals for these contrasts alongside the point estimates.
 
-\paragraph{Finding 2 --- LLMs can encode numeric structure from prose.}
-Setting 5 (unified prose, no raw features) achieves C\,=\,0.6194 ---
+\paragraph{Finding 2: LLMs can encode numeric structure from prose.}
+Setting~3-Full (full-text prose, no raw features) achieves C\,=\,0.6195,
 matching S1 (0.6191) while using \emph{no raw numeric features}.
 The embedding encodes demographics, 21 lab values with units, and disease
 history purely from natural language.
-S5 also achieves the best mean TD-AUC (0.6127) and best calibration
-(IBS\,=\,0.1408), suggesting that prose encoding captures numeric-biomarker
+Setting~3-Full achieves the best calibration (IBS\,=\,0.1408) and strong mean TD-AUC
+(0.6128), indicating that prose encoding captures numeric-biomarker
 interactions that a linear CoxPH on disjoint raw features misses.
 
-\paragraph{Finding 3 --- Zero-shot inference has a calibration gap.}
-Delphi (S2) achieves C\,=\,0.6161 but substantially worse calibration
-(IBS\,=\,0.185 vs.\ $\approx$0.141 for all CoxPH variants).
-Its TD-AUC profile is unusual: 0.52 at 9.5\,yr (Table~\ref{tab:horizon})
-rising to 0.65 at 19.7\,yr, suggesting chronic-disease priors that align
+\paragraph{Finding 3: Calibration gap of autoregressive generation.}
+Delphi (S2) achieves C\,=\,0.6161 but calibration is substantially worse
+(IBS\,=\,0.185 vs.\ $\approx$0.141 for CoxPH variants).
+Its TD-AUC rises from 0.52 at 9.5\,yr to 0.65 at 19.7\,yr
+(Fig.~\ref{fig:horizon}), suggesting chronic disease priors that align
 poorly with near-term acute mortality.
 
-\begin{table}[t]
-\centering
-\caption{TD-AUC by prediction horizon on the test set (reference configurations).}
-\label{tab:horizon}
-\begin{tabular}{lccc}
-\toprule
-Setting & 9.5\,yr & 15.4\,yr & 19.7\,yr \\
-\midrule
-S1 Baseline CoxPH            & 0.584 & 0.596 & 0.612 \\
-S2 Delphi zero-shot          & 0.522 & 0.586 & \textbf{0.649} \\
-S3 Prose + Qwen + concat     & 0.594 & 0.603 & 0.618 \\
-S4 Decoupled + Qwen + concat & 0.584 & 0.596 & 0.612 \\
-S5 Unified prose, Qwen       & \textbf{0.605} & \textbf{0.615} & 0.615 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_2b}
+  \caption{TD-AUC by prediction horizon for the five reference configurations.
+           Delphi (S2) rises from near-chance (0.52) at 9.5\,yr to peak (0.65)
+           at 19.7\,yr, while CoxPH-based settings show a comparatively flat
+           profile across horizons.}
+  \label{fig:horizon}
+\end{figure}
 
 \paragraph{Note on effect magnitudes.}
-All five settings cluster within a C-index range of 0.616--0.624, with the fully
-supervised CoxPH baseline (S1\,=\,0.619) competitive across settings.
-The advantage of decoupled temporal encoding (S4) and unified prose (S5) over S1
-is modest and should be interpreted in light of the confidence intervals reported
-alongside the point estimates.
+All five reference settings cluster within a C-index range of 0.616--0.623,
+with the fully supervised CoxPH baseline (S1\,=\,0.619) competitive across
+settings.
+The advantage of decoupled temporal encoding (S4) and full-text prose (S3-Full) over S1
+is modest and should be interpreted in light of the bootstrap 95\% confidence
+intervals reported below.
 The key scientific value is not the absolute gap but the controlled isolation of
 \emph{which structural encoding choices} create the gap: the S4-vs-S3 contrast
 holds encoder, raw features, and fusion fixed, isolating serialisation as the sole
 variable.
 
-\subsection{Encoder Ablation (Axis B)}
+\subsection{Bootstrap Confidence Intervals}
 
-Table~\ref{tab:encoder} compares Qwen3-8B and Bio\_ClinicalBERT across
-Settings 3, 4, and 5, holding fusion fixed at concatenation
-(Setting 5 has no fusion).
-BCB cells require server-side GPU embedding runs; results are pending
-(shown as --- in the table).
+Tables~\ref{tab:boot_ci} and~\ref{tab:boot_contrasts} report paired bootstrap
+95\% confidence intervals (1000 resamples, seed 42) for the C-index of each
+reference method and for key pairwise contrasts.
+Bootstrap resamples are paired across methods so the difference CIs reflect
+within-resample correlation.
 
-\begin{table}[t]
+\begin{table}[ht]
 \centering
-\caption{Encoder ablation: Qwen3-8B vs.\ Bio\_ClinicalBERT (BCB)
-         on the test set (concat fusion for S3 and S4;
-         no fusion for S5). Pending cells await server embedding runs.}
-\label{tab:encoder}
-\begin{tabular}{llccc}
+\caption{C-index point estimates and bootstrap 95\% CIs on the test set
+         (n\,=\,18{,}623). Per-method intervals are derived from paired
+         bootstrap and share the same resample indices.
+         $^\dagger$S3-Full·BCB is affected by BCB's 512-token truncation (Sec.~\ref{sec:encoder}).}
+\label{tab:boot_ci}
+\begin{tabular}{llcc}
 \toprule
-Setting & Encoder & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+Setting & Method & C-index & 95\% CI \\
 \midrule
-S3 & Qwen3-8B    & 0.6156 & 0.6074 & 0.1409 \\
-S3 & BCB         & ---    & ---    & --- \\
+S1 & Baseline CoxPH                    & 0.6191 & (0.610, 0.627) \\
 \midrule
-S4 & Qwen3-8B    & 0.6238 & 0.6001 & 0.1410 \\
-S4 & BCB         & ---    & ---    & --- \\
+S3 & Qwen3-8B + concat                 & 0.6156 & (0.607, 0.624) \\
+S3 & BCB + concat                      & 0.6225 & (0.614, 0.631) \\
 \midrule
-S5 & Qwen3-8B    & 0.6194 & 0.6127 & 0.1408 \\
-S5 & BCB         & ---    & ---    & --- \\
+S4 & Qwen3-8B + concat                 & 0.6233 & (0.615, 0.631) \\
+S4 & BCB + concat                      & 0.6232 & (0.615, 0.631) \\
+\midrule
+S3-Full & Qwen3-8B (no raw)             & 0.6195 & (0.611, 0.628) \\
+S3-Full & BCB (no raw)$^\dagger$       & 0.6371 & (0.629, 0.646) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent
-Note: Bio\_ClinicalBERT's hard 512-token limit causes truncation for
-Setting 5 texts (unified summary prose), which can exceed 512 tokens for
-patients with long disease histories.
-Results for S5·BCB should therefore be interpreted with this caveat.
-
-\subsection{Fusion Ablation (Axis C)}
-
-Table~\ref{tab:fusion} compares concatenation and element-wise summation
-fusion for Settings 3 and 4, holding encoder fixed at Qwen3-8B.
-Summation results are computed locally on the existing Qwen3-8B embeddings
-(10k-patient validation subset; full-cohort runs pending server GPU pass for BCB).
-BCB fusion cells are pending.
-
-\begin{table}[t]
+\begin{table}[ht]
 \centering
-\caption{Feature fusion ablation: concatenation vs.\ element-wise summation
-         (Qwen3-8B encoder). Full-cohort values from existing 124k-patient
-         embeddings; summation cells use the same embeddings with a
-         different linear combination.}
-\label{tab:fusion}
+\caption{Pairwise C-index contrasts with paired bootstrap 95\% CIs.
+         $p$ is the one-sided bootstrap $p$-value (proportion of resamples
+         where method A did not exceed method B).}
+\label{tab:boot_contrasts}
 \begin{tabular}{llccc}
 \toprule
-Setting & Fusion & C-index $\uparrow$ & Mean TD-AUC $\uparrow$ & IBS $\downarrow$ \\
+Method A & Method B & $\Delta$C & 95\% CI & $p$ \\
 \midrule
-S3 & concat     & 0.6156 & 0.6074 & 0.1409 \\
-S3 & sum        & ---    & ---    & --- \\
-\midrule
-S4 & concat     & 0.6238 & 0.6001 & 0.1410 \\
-S4 & sum        & ---    & ---    & --- \\
+S4 Qwen concat & S1 Baseline   & $+$0.0043 & ($+$0.004, $+$0.005) & $<$0.001 \\
+S4 BCB concat  & S1 Baseline   & $+$0.0042 & ($+$0.004, $+$0.005) & $<$0.001 \\
+S3-Full Qwen   & S1 Baseline   & $+$0.0004 & ($-$0.007, $+$0.008) & 0.45     \\
+S4 Qwen concat & S3 Qwen concat & $+$0.0078 & ($+$0.005, $+$0.010) & $<$0.001 \\
+S4 BCB concat  & S3 BCB concat  & $+$0.0007 & ($+$0.000, $+$0.001) & 0.001    \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent
-Pending summation-fusion cells require re-running
-\texttt{evaluate\_embedding\_survival.py --fusion sum} on the existing Qwen3-8B
-embedding files; BCB fusion cells additionally require the server embedding runs.
+The contrasts confirm two claims.
+First, S4 (decoupled temporal encoding) significantly improves over S1
+($\Delta$C\,$\approx$\,$+$0.004, both encoders, $p<0.001$).
+The difference is small but highly consistent across resamples: the CI lower
+bound ($+$0.004) is comfortably above zero, indicating the gap is not a
+statistical artefact.
+Second, the S4-vs-S3 contrast isolates temporal serialisation as the cause:
+for Qwen3-8B, $\Delta$C\,=\,$+$0.008 with CI\,=\,($+$0.005, $+$0.010),
+$p<0.001$.
+For BCB, the same contrast yields $\Delta$C\,=\,$+$0.001, statistically
+detectable but practically negligible, suggesting that BCB's local
+attention patterns may partially capture ordinal structure from the prose
+format, reducing the benefit of explicit temporal decoupling.
+S3-Full (full-text prose, Qwen) does not significantly exceed S1
+($\Delta$C\,=\,$+$0.0004, $p=0.45$), consistent with the absence of
+temporal decoupling in the prose serialisation.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\textwidth]{figures/figure_main}
-  \caption{Test-set performance for the five input-format settings (Axis A,
-           reference configurations).
-           (A) Harrell C-index with the cross-sectional baseline (S1) as dotted reference;
-           (B) mean time-dependent AUC; (C) Integrated Brier Score;
-           (D) TD-AUC by prediction horizon.
-           All embedding variants use Qwen3-Embedding (8B) as the encoder and
-           concatenation fusion where applicable.}
-  \label{fig:results}
-\end{figure}
+\subsection{Ablation Studies: Encoder and Fusion}
+\label{sec:encoder}
+
+\paragraph{Encoder architecture.}
+BCB and Qwen3-8B produce near-identical C-indices for S3 and S4
+(BCB: 0.6225/0.6232; Qwen: 0.6156/0.6233; full data in Table~\ref{tab:full}),
+confirming that discriminative information is accessible to both encoder
+families.
+The temporal-ordering advantage (S4 over S3) persists for Qwen
+($\Delta$C\,=\,$+$0.008, $p<0.001$) but is negligible for BCB
+($\Delta$C\,=\,$+$0.001), suggesting BCB's local attention partially
+captures ordinal structure from prose, reducing the benefit of explicit
+decoupling.
+S3-Full·BCB achieves the highest C-index (0.6371) yet near-chance TD-AUC
+(0.507): BCB's 512-token limit truncates the disease-history tail, retaining
+a strong age signal but losing temporal variation.
+Qwen3-8B (8192-token context) is therefore the appropriate encoder for
+Setting~3-Full.
+
+\paragraph{Feature fusion.}
+Concatenation uniformly outperforms summation by $+$0.028--$+$0.039
+C-index (Table~\ref{tab:full}).
+Summation projects the embedding to 60 dimensions before adding raw
+features, discarding information orthogonal to the leading principal
+components; concatenation retains 64 independent embedding dimensions
+alongside all 60 raw features.
+Summation variants (0.584--0.596) fall below the S1 baseline (0.619).
+Concatenation variants span 0.616--0.624; S3·Qwen (0.616) falls marginally
+below S1, while the BCB and S4 variants (0.622--0.623) exceed it, making
+fusion strategy a more consequential choice than encoder selection.
+

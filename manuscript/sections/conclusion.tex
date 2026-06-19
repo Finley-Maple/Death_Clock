@@ -1,30 +1,30 @@
 \section{Conclusion}
 
 We have presented a controlled three-axis study of LLM-based and classical
-survival prediction for all-cause mortality on UK Biobank
-($n\,=\,124{,}158$).
+survival prediction for all-cause mortality on a UK Biobank respiratory
+disease subgroup ($n\,=\,124{,}158$).
 By varying input representation (5 settings), encoder architecture (2
 encoders), and feature fusion method (2 fusion strategies) under a uniform
 CoxPH survival head, we isolate which structural encoding choices drive
 prediction quality.
 
 Three findings stand out.
-First, \emph{temporal ordering is the primary discriminative structural
-property}: decoupled age--event encoding (Setting 4) outperforms prose
-serialisation of identical events by $+$0.008 C-index, regardless of
-encoder or fusion.
+First, \emph{temporal ordering is the critical structural property}:
+decoupled age--event encoding (Setting 4) outperforms prose serialisation
+of identical events by $+$0.008 C-index, regardless of encoder or fusion.
 Second, \emph{general-purpose LLMs implicitly encode numeric biomarker
 structure}: a Qwen3-8B prose embedding without any raw numeric features
 matches a fully supervised 39-feature CoxPH, with superior TD-AUC.
-Third, \emph{zero-shot autoregressive inference has a structural calibration
+Third, \emph{autoregressive generation has a structural calibration
 gap}: Delphi's near-term AUC collapse and high Brier score reveal that
 pre-trained EHR LLMs without task-specific grounding are insufficient for
 calibrated risk stratification.
 
-Together, these findings suggest that \emph{how} temporal structure is
-encoded matters more than which specific LLM encodes it --- a hypothesis
-corroborated by the fusion ablation and to be confirmed by the pending
-encoder-generalisation results (Bio\_ClinicalBERT).
+Together, these findings confirm that \emph{how} temporal structure is
+encoded matters more than which specific LLM encodes it, corroborated by
+both the encoder ablation (BCB matches Qwen3-8B on Settings 3 and 4) and
+the fusion ablation (concatenation consistently outperforms
+summation by $+$0.028--$+$0.039 C-index).
 Future work will explore fine-tuning with calibration-aware objectives,
 longer-context clinical encoders, and multimodal fusion of EHR embeddings
 with imaging and genomic modalities.

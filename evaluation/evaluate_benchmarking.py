@@ -55,7 +55,7 @@ def evaluate_benchmarking(args):
         cox_cfg,
         horizons=None,
         save_preds_dir=preds_dir,
-        method_name="benchmarking_cox",
+        method_name="s1_baseline",
     )
 
     results["metadata"] = {
