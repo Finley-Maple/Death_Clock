@@ -1,0 +1,37 @@
+\section{Related Work}
+
+Cox proportional hazards~\cite{coxph_original} remains the dominant survival
+model in clinical prediction due to its calibration properties and
+interpretability, with C-index in the 0.60--0.68 range for all-cause
+mortality on large biobank cohorts~\cite{harrellcindex}.
+Deep survival models, including DeepHit~\cite{deephit} and
+DeepSurv~\cite{deepsurv}, replace the linear predictor with a neural network
+but rarely outperform well-regularised CoxPH on tabular data.
+Large-scale UK Biobank frameworks~\cite{ukbmdrmf} identify respiratory
+multimorbidity cohorts as exhibiting the highest structural complexity and
+lowest discriminative performance, motivating our cohort selection.
+Sequential EHR models, Doctor~AI~\cite{doctorai} and RETAIN~\cite{retain},
+treat patient history as an ordered sequence but make inter-event duration
+invisible.
+BERT-style foundation models, BEHRT~\cite{behrt} and Med-BERT~\cite{medbert},
+improve long-range co-occurrence modelling; CEHR-BERT~\cite{cehrbert}
+introduced discrete Artificial Time Tokens but they remain categorical,
+losing geometric precision over decade-long trajectories.
+Time2Vec~\cite{time2vec} proposed a continuous sinusoidal time representation
+providing geometric separation without discretisation, a design adopted by
+Delphi~\cite{delphi2024} at population scale.
+The most recent paradigm serialises patient records as structured prose and
+encodes them with general-purpose LLMs; benchmarking studies~\cite{llmehrenc,serialehr}
+show this frequently matches task-specific EHR models while remaining
+zero-shot.
+
+Despite this progression, no prior study has held the cohort, survival model,
+and encoder family constant while systematically varying the temporal encoding
+format from cross-sectional features to continuous geometric representation.
+The benchmark established by Harutyunyan et al.~\cite{harutyunyan2019} varies
+tasks, not encoding strategies; LLM-as-encoder ablations~\cite{llmehrenc}
+vary model families rather than input serialisation.
+The present study isolates encoding format as the primary experimental axis
+(five serialisation settings, one CoxPH head), providing the first controlled
+evidence that geometric continuity of the time axis is the primary structural
+determinant of long-horizon survival discrimination.

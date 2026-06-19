@@ -1,0 +1,26 @@
+\begin{abstract}
+Accurate mortality risk stratification from electronic health records demands
+models that reason over longitudinal disease trajectories, numeric biomarkers,
+and demographic context.
+The central design question is \emph{how temporal structure should be encoded}:
+does explicit geometric separation of events in time improve survival
+discrimination over prose serialisation?
+We present a five-setting controlled study on a UK Biobank respiratory disease
+subgroup ($n\,{=}\,124{,}158$), systematically varying input representation
+from cross-sectional bag-of-features to unified clinical prose, with encoder
+and fusion ablations across 12 experimental cells.
+Our main finding is that temporal ordering is the critical structural property:
+decoupled age--event sinusoidal encoding (Setting~4) achieves a $+$0.008
+C-index advantage over prose serialisation of identical events (bootstrap
+95\,\% CI: $+$0.005 to $+$0.010, $p<0.001$), while a Qwen3-8B prose
+embedding with no raw features matches a 39-feature CoxPH baseline,
+demonstrating implicit numeric precision in LLM representations.
+Encoder choice and fusion method are secondary: within each setting, encoder
+family changes C-index by at most 0.007 (and by only 0.001 in Setting~4),
+while concatenation outperforms summation by $+$0.028--$+$0.039.
+Autoregressive generation shows an inherent calibration gap in acute risk
+stratification, with near-chance near-term AUC (0.52 at 9.5\,yr) and
+substantially higher Brier score (IBS\,=\,0.185 vs.\ 0.141).
+\keywords{survival analysis \and LLM embeddings \and EHR \and
+          UK Biobank \and temporal encoding}
+\end{abstract}

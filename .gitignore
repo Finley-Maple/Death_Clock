@@ -118,3 +118,24 @@ ukb_audit_reports/
 # ==========================
 docs/*.html
 docs/README_files/
+
+# ==========================
+# LaTeX build artifacts
+# ==========================
+*.aux
+*.blg
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+
+# Keep compiled outputs
+!main.pdf
+!main.bbl

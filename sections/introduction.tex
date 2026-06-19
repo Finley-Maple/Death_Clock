@@ -1,0 +1,90 @@
+\section{Introduction}
+
+All-cause mortality prediction from electronic health records (EHR) is a
+canonical clinical risk stratification task with direct relevance to
+preventive medicine, care prioritisation, and health resource allocation.
+Unlike typical classification problems, mortality prediction requires models
+to reason over \emph{structured multimodal data}: longitudinal sequences of
+disease events with precise temporal ordering, numeric biomarker measurements
+with clinical significance thresholds, and demographic context.
+Extracting survival-relevant signal from this data is fundamentally a
+\emph{structural pattern recognition} problem: identifying which temporal
+configurations of ICD codes, and which numeric biomarker profiles, predict
+adverse outcomes requires detecting hierarchical, ordered patterns rather
+than simple feature co-occurrences.
+A disease trajectory is not a bag of tokens: the 8-year interval between a
+first metabolic event and a subsequent cardiovascular diagnosis carries causal
+information that token proximity alone cannot preserve.
+How events are temporally arranged, how age is encoded as a continuous
+geometric quantity, and how numeric biomarker values are contextualised
+against clinical reference ranges together determine whether a model reads a
+patient record as an unordered feature set or as a structured causal
+trajectory.
+How temporal structure is encoded is the central design question this study
+investigates.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/figure_0}
+  \caption{Prediction task overview.
+           (A) Three illustrative patient timelines from the UK Biobank
+           respiratory cohort ($n$=124,158).
+           Blue dots mark ICD-10 diagnosis events before the age-60
+           feature-extraction cutoff; a red cross indicates death, an open
+           circle indicates censoring.
+           (B) Illustrative model output: a CoxPH survival curve
+           $S(t\mid x)$ stratified by predicted risk group.
+           Evaluation metrics (C-index, TD-AUC, IBS) measure discrimination
+           and calibration of these curves on the held-out test set.}
+  \label{fig:task}
+\end{figure}
+
+Large language models (LLMs) have demonstrated impressive clinical knowledge
+and are increasingly applied to clinical prediction.
+Two distinct paradigms have emerged: \emph{autoregressive generation},
+where a generative EHR transformer produces survival scores directly from
+tokenised event sequences~\cite{delphi2024}, and \emph{encoder embedding},
+where a frozen encoder maps patient records to dense vectors combined with a
+lightweight CoxPH survival head~\cite{llmehrenc,serialehr}.
+Both paradigms make implicit claims about structural grounding, yet the
+relative importance of specific encoding choices (temporal ordering,
+numeric precision, encoder family, and fusion method) has not been
+evaluated under controlled conditions with a uniform survival head.
+
+We address this gap with a controlled study on a UK Biobank respiratory
+disease subgroup ($n\,=\,124{,}158$), a population where mortality prediction
+is especially challenging due to multimorbidity burden and heterogeneous
+temporal disease trajectories~\cite{ukbmdrmf}.
+Our primary dimension varies \emph{input representation} across five
+temporal-encoding settings, from cross-sectional bag-of-features to fully
+unified clinical prose, all under a uniform CoxPH survival head.
+To verify that findings generalise beyond a single implementation, we include
+two ablations: \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT)
+and \emph{feature fusion method} (concatenation vs.\ element-wise summation).
+
+Our main contributions are:
+\begin{itemize}
+  \item A five-setting controlled benchmark of temporal encoding strategies
+        for LLM-based mortality prediction, the first to isolate input
+        serialisation as the sole experimental variable under a uniform
+        survival head.
+
+  \item Evidence that \emph{temporal ordering is the critical structural
+        property}: decoupled age--event sinusoidal encoding (Setting~4)
+        achieves a $+$0.008 C-index advantage (bootstrap 95\,\% CI:
+        $+$0.005 to $+$0.010, $p<0.001$) over prose serialisation of
+        identical events.
+
+  \item Evidence that LLMs encode numeric biomarker structure from prose:
+        unified summary embedding (Setting~5) with \emph{no raw features}
+        matches a 39-feature CoxPH baseline, and that autoregressive
+        generation faces a calibration gap in acute risk stratification
+        (Delphi IBS\,=\,0.185 vs.\ 0.141, near-term AUC\,=\,0.52 at
+        9.5\,yr).
+
+  \item Ablation evidence that encoder choice and fusion method are
+        secondary to serialisation format: Bio\_ClinicalBERT and Qwen3-8B
+        differ by at most 0.007 C-index within each setting (0.001 in
+        Setting~4); concatenation outperforms summation by
+        $+$0.028--$+$0.039.
+\end{itemize}
