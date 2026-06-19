@@ -7,7 +7,7 @@ Bio\_ClinicalBERT (110M params) runs on the same GPU at
 $\approx$30 min per pass.
 CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
 Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
-Code and evaluation scripts are available at [repository URL].
+Code and evaluation scripts are available at \url{https://github.com/Finley-Maple/Death_Clock}.
 
 \subsection{Main Results: Representation Axis}
 
@@ -41,7 +41,7 @@ S1 — Baseline CoxPH   & —              & 0.6191 & 0.1410 & 0.5999 & 0.584 & 
 S2 — Delphi zero-shot & Delphi         & 0.6161 & 0.1846 & 0.5984 & 0.522 & 0.586 & \textbf{0.649} \\
 \midrule
 \rowcolor{gray!12}
-S3 — Isolated prose   & Qwen · concat  & 0.6156 & 0.1409 & \textbf{0.6074} & 0.594 & 0.603 & 0.618 \\
+S3 — Isolated prose   & Qwen · concat  & 0.6156 & 0.1409 & 0.6074 & 0.594 & 0.603 & 0.618 \\
 S3 — Isolated prose   & Qwen · sum     & 0.5875 & 0.1421 & 0.5813 & 0.568 & 0.583 & 0.587 \\
 S3 — Isolated prose   & BCB · concat   & 0.6225 & 0.1410 & 0.6014 & 0.586 & 0.597 & 0.613 \\
 S3 — Isolated prose   & BCB · sum      & 0.5844 & 0.1416 & 0.5819 & 0.575 & 0.578 & 0.589 \\
@@ -53,7 +53,7 @@ S4 — Decoupled time   & BCB · concat   & 0.6232 & 0.1410 & 0.6025 & 0.587 & 0
 S4 — Decoupled time   & BCB · sum      & 0.5955 & 0.1413 & 0.5868 & 0.583 & 0.588 & 0.588 \\
 \midrule
 \rowcolor{gray!12}
-S5 — Unified prose    & Qwen (no raw)  & 0.6195 & \textbf{0.1408} & 0.6128 & \textbf{0.605} & \textbf{0.615} & 0.615 \\
+S5 — Unified prose    & Qwen (no raw)  & 0.6195 & \textbf{0.1408} & \textbf{0.6128} & \textbf{0.605} & \textbf{0.615} & 0.615 \\
 S5 — Unified prose    & BCB$^\dagger$  & 0.6371 & 0.1430 & 0.5074 & 0.510 & 0.508 & 0.505 \\
 \bottomrule
 \end{tabular}}
