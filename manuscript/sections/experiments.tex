@@ -58,7 +58,7 @@ S4 — Decoupled time     & BCB · sum      & 0.5955 & 0.1413 & 0.5868 & 0.583 &
 \end{tabular}}
 \end{table}
 
-\begin{figure}[ht]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/figure_2a}
   \caption{Reference-configuration results for the five input-format settings.
@@ -99,7 +99,7 @@ Its TD-AUC rises from 0.52 at 9.5\,yr to 0.65 at 19.7\,yr
 (Fig.~\ref{fig:horizon}), suggesting chronic disease priors that align
 poorly with near-term acute mortality.
 
-\begin{figure}[ht]
+\begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/figure_2b}
   \caption{TD-AUC by prediction horizon for the five reference configurations.
@@ -123,38 +123,15 @@ variable.
 
 \subsection{Bootstrap Confidence Intervals}
 
-Tables~\ref{tab:boot_ci} and~\ref{tab:boot_contrasts} report paired bootstrap
-95\% confidence intervals (1000 resamples, seed 42) for the C-index of each
-reference method and for key pairwise contrasts.
-Bootstrap resamples are paired across methods so the difference CIs reflect
+Table~\ref{tab:boot_contrasts} reports paired bootstrap 95\% confidence
+intervals (1000 resamples, seed 42) for key pairwise C-index contrasts.
+Bootstrap resamples are paired across methods so difference CIs reflect
 within-resample correlation.
+Per-method bootstrap 95\% CIs are: S1\,(0.610, 0.627); S3·Qwen\,(0.607, 0.624);
+S3·BCB\,(0.614, 0.631); S4·Qwen\,(0.615, 0.631); S4·BCB\,(0.615, 0.631);
+S3-Full·Qwen\,(0.611, 0.628); S3-Full·BCB\,(0.629, 0.646).
 
-\begin{table}[ht]
-\centering
-\caption{C-index point estimates and bootstrap 95\% CIs on the test set
-         (n\,=\,18{,}623). Per-method intervals are derived from paired
-         bootstrap and share the same resample indices.
-         $^\dagger$S3-Full·BCB is affected by BCB's 512-token truncation (Sec.~\ref{sec:encoder}).}
-\label{tab:boot_ci}
-\begin{tabular}{llcc}
-\toprule
-Setting & Method & C-index & 95\% CI \\
-\midrule
-S1 & Baseline CoxPH                    & 0.6191 & (0.610, 0.627) \\
-\midrule
-S3 & Qwen3-8B + concat                 & 0.6156 & (0.607, 0.624) \\
-S3 & BCB + concat                      & 0.6225 & (0.614, 0.631) \\
-\midrule
-S4 & Qwen3-8B + concat                 & 0.6233 & (0.615, 0.631) \\
-S4 & BCB + concat                      & 0.6232 & (0.615, 0.631) \\
-\midrule
-S3-Full & Qwen3-8B (no raw)             & 0.6195 & (0.611, 0.628) \\
-S3-Full & BCB (no raw)$^\dagger$       & 0.6371 & (0.629, 0.646) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Pairwise C-index contrasts with paired bootstrap 95\% CIs.
          $p$ is the one-sided bootstrap $p$-value (proportion of resamples

@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyArrowPatch
 
+plt.rcParams.update({'font.family': 'serif', 'font.serif': ['Times New Roman']})
+
 os.makedirs("figures", exist_ok=True)
 
 # ── Colour palette (matches paper palette) ──────────────────────────────────
@@ -156,10 +158,6 @@ def main():
     ax.legend(handles=legend_elements, fontsize=8, loc="lower right",
               framealpha=0.88, edgecolor="lightgray", ncol=2)
 
-    ax.set_title("All-cause mortality prediction task\n"
-                 "(UK Biobank respiratory cohort, $n$=124,158; event rate 26.2%)",
-                 fontsize=10, fontweight="bold", pad=6)
-
     ax.text(-0.08, 1.04, "A", transform=ax.transAxes,
             fontsize=13, fontweight="bold", va="top")
 
@@ -190,17 +188,8 @@ def main():
     ax2.spines["top"].set_visible(False)
     ax2.spines["right"].set_visible(False)
     ax2.grid(axis="y", linestyle="--", alpha=0.3)
-    ax2.set_title("Model output: predicted survival curve\n"
-                  "(CoxPH head, evaluated with C-index / TD-AUC / IBS)",
-                  fontsize=10, fontweight="bold", pad=6)
-
     ax2.text(-0.18, 1.04, "B", transform=ax2.transAxes,
              fontsize=13, fontweight="bold", va="top")
-
-    fig.suptitle(
-        "Prediction task: temporal EHR encoding $\\rightarrow$ mortality risk stratification",
-        fontsize=10.5, y=1.03,
-    )
 
     for ext in ("png", "pdf"):
         out = f"figures/figure_0.{ext}"

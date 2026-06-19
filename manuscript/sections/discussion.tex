@@ -86,10 +86,6 @@ required before clinical translation.
 Bio\_ClinicalBERT's 512-token limit is an architectural constraint that
 disproportionately affects Setting~3-Full; future work should evaluate
 longer-context clinical encoders.
-The primary evaluation metrics (C-index, TD-AUC) measure discrimination but not
-calibration of the predicted survival function.
-We supplement IBS with restricted mean survival time (RMST\,$= \int_0^\tau S(t\mid x)\,\mathrm{d}t$),
-which provides a patient-interpretable calibration summary (expected life-years
-within the follow-up window $\tau$).
-RMST-decile calibration analysis across the full 12-cell matrix is left as
-an extension once all server embedding runs are consolidated locally.
+The primary evaluation metrics (C-index, TD-AUC) measure discrimination; IBS and
+RMST ($\int_0^\tau S(t\mid x)\,\mathrm{d}t$) complement these with calibration
+and patient-interpretable life-year estimates respectively.

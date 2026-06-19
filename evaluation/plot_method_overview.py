@@ -362,17 +362,8 @@ for k, (fc, lbl) in enumerate(LEG):
 # ── Save ───────────────────────────────────────────────────────────────────────
 plt.tight_layout(pad=0.2)
 
-import os as _os
-_ms_dir = _os.path.join(_os.path.dirname(__file__), "..", "manuscript", "figures")
-_os.makedirs(_ms_dir, exist_ok=True)
-
 plt.savefig("figures/figure_methods.png", dpi=150, bbox_inches="tight",
             facecolor="white")
 plt.savefig("figures/figure_methods.pdf", bbox_inches="tight",
             facecolor="white")
-plt.savefig(_os.path.join(_ms_dir, "figure_1.png"), dpi=150, bbox_inches="tight",
-            facecolor="white")
-plt.savefig(_os.path.join(_ms_dir, "figure_1.pdf"), bbox_inches="tight",
-            facecolor="white")
 print("Saved: figures/figure_methods.png  figures/figure_methods.pdf")
-print(f"Saved: {_ms_dir}/figure_1.png  {_ms_dir}/figure_1.pdf")
