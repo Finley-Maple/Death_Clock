@@ -36,9 +36,6 @@ Kazemi, S.M., Goel, R., Eghbali, S., Ramanan, J., Sahota, J., Thakur, S., Wu, S.
 \bibitem{llmehrenc}
 Kim, J., et~al.: Large language models are powerful electronic health record encoders. arXiv  \textbf{2502.17403} (2025), arXiv:2502.17403
 
-\bibitem{behrtukb}
-Laur{\`o}, I., et~al.: Extending {BEHRT} to {UK} {Biobank}: assessing transformer model performance in clinical prediction. Frontiers in Digital Health  (2026). \doi{10.3389/fdgth.2026.1715506}
-
 \bibitem{deephit}
 Lee, C., Zame, W., Yoon, J., van~der Schaar, M.: {DeepHit}: A deep learning approach to survival analysis with competing risks. In: Proceedings of the 32nd AAAI Conference on Artificial Intelligence. pp. 2314--2321 (2018)
 
@@ -62,8 +59,5 @@ Team, Q.: Qwen3 technical report. arXiv  \textbf{2505.09388} (2025), arXiv:2505.
 
 \bibitem{vaswani2017attention}
 Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, {\L}., Polosukhin, I.: Attention is all you need. In: Advances in Neural Information Processing Systems. vol.~30 (2017)
-
-\bibitem{xie2022temporal}
-Xie, F., Yuan, H., Ning, Y., Feng, M., Ong, M.E.H., Lyu, J., Liu, N., Rajnics, P.: Deep learning for temporal data representation in electronic health records: A systematic review of challenges and methodologies. Journal of Biomedical Informatics  \textbf{126},  103980 (2022). \doi{10.1016/j.jbi.2021.103980}
 
 \end{thebibliography}
