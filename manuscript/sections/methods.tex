@@ -60,7 +60,8 @@ of increasing temporal and modality richness:
 \begin{enumerate}
   \item \textbf{Cross-sectional (Setting 1).}
         Demographics, 21 biomarkers, and 11 binary comorbidity flags are
-        concatenated into a 39-dimensional numeric vector.
+        first discretised and standardised by a preprocessing step, then
+        concatenated into a 39-dimensional numeric vector fed directly to CoxPH.
         No temporal information and no text encoder are used.
         This corresponds to the standard supervised CoxPH baseline.
 

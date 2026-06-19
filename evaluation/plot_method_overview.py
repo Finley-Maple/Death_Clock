@@ -198,10 +198,10 @@ for i, cx in enumerate(COL_X):
 row_lbl(Y_FORM + H_FORM / 2, "Input\nFormat")
 
 FORM_TXT = [
-    "Discrete ICD token sequence\n[D₁  D₂  …  Dₙ  ⊕DEAD?]",
-    "39 numeric features\n[age · sex · BMI\n21 labs · 11 flags]",
+    "Discrete ICD token sequence\n[D1  D2  ...  Dn  [DEAD?]]",
+    "Preprocessed 39-dim vector\n(discretise + standardise\nage · sex · BMI · labs · flags)",
     "Disease-only prose text\n\"At age 44, asthma (J45) …\"",
-    "Temporal token stream\n\"44yr:J45 → 52yr:F32 → …\"",
+    "Decoupled: age → sin/cos\n‖ ICD code → text encoder\n(per-event, then mean-pool)",
     "Full clinical prose\n(demographics + labs\n+ disease history)",
 ]
 for i, (cx, txt) in enumerate(zip(COL_X, FORM_TXT)):
@@ -225,7 +225,7 @@ def draw_delphi(cx):
             "Autoregressive LLM (Delphi)",
             ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=MC[0], zorder=4)
-    tokens = ["D₁", "D₂", "…", "Dₙ", "⊕"]
+    tokens = ["D1", "D2", "...", "Dn", "[D]"]
     tclrs  = [DC["icd"]] * 4 + ["#B03030"]
     tw     = (COL_W - 0.70) / len(tokens)
     ty     = Y_ENC + H_ENC / 2 + 0.15
@@ -269,15 +269,15 @@ def draw_baseline(cx):
                             linewidth=0.5, alpha=0.82, zorder=4)
         ax.add_patch(r)
     ax.text(cx, Y_ENC + 0.45,
-            "39 raw numerics → Cox partial likelihood",
+            "Preprocess → discretise + standardise\n→ 39 numerics → Cox partial likelihood",
             ha="center", va="center",
             fontsize=10.5, color=MID_T, zorder=4)
 
 
 QWEN_SUB = [
-    "Disease-only prose → mean-pool → z ∈ ℝ⁴⁰⁹⁶",
-    "Temporal token stream → mean-pool → z ∈ ℝ⁴⁰⁹⁶",
-    "Full clinical prose → mean-pool → z ∈ ℝ⁴⁰⁹⁶",
+    "Disease-only prose → mean-pool → z (4096-dim)",
+    "Per-event: age sin/cos || ICD token → concat\n→ mean-pool across events → z",
+    "Full clinical prose → mean-pool → z (4096-dim)",
 ]
 
 
@@ -380,8 +380,18 @@ for k, (fc, lbl) in enumerate(LEG):
 
 # ── Save ───────────────────────────────────────────────────────────────────────
 plt.tight_layout(pad=0.2)
+
+import os as _os
+_ms_dir = _os.path.join(_os.path.dirname(__file__), "..", "manuscript", "figures")
+_os.makedirs(_ms_dir, exist_ok=True)
+
 plt.savefig("figures/figure_methods.png", dpi=150, bbox_inches="tight",
             facecolor="white")
 plt.savefig("figures/figure_methods.pdf", bbox_inches="tight",
             facecolor="white")
+plt.savefig(_os.path.join(_ms_dir, "figure_1.png"), dpi=150, bbox_inches="tight",
+            facecolor="white")
+plt.savefig(_os.path.join(_ms_dir, "figure_1.pdf"), bbox_inches="tight",
+            facecolor="white")
 print("Saved: figures/figure_methods.png  figures/figure_methods.pdf")
+print(f"Saved: {_ms_dir}/figure_1.png  {_ms_dir}/figure_1.pdf")
