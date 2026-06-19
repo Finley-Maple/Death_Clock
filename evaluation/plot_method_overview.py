@@ -50,7 +50,7 @@ DIV_C    = "#D0D5DB"
 ARR_C    = "#606060"
 
 # ── Column geometry ────────────────────────────────────────────────────────────
-LM    = 2.2            # left-margin for row labels
+LM    = 0.3            # no row labels — minimal left margin
 COL_W = 3.5
 COL_G = 0.45
 COL_X = [LM + COL_W / 2 + i * (COL_W + COL_G) for i in range(5)]
@@ -97,24 +97,8 @@ def row_lbl(y_ctr, text):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Method column headers
-# ═══════════════════════════════════════════════════════════════════════════════
-TITLES = [
-    "Delphi\n(Zero-shot LLM)",
-    "Baseline\nCoxPH",
-    "S3 Prose\nEmb + CoxPH",
-    "S4 Trajectory\nEmb + CoxPH",
-    "S3-Full\nFull Prose",
-]
-for i, (cx, t) in enumerate(zip(COL_X, TITLES)):
-    box(cx, Y_HDR, COL_W, H_HDR, t,
-        fc=MC[i], tc="white", fs=14, bold=True,
-        ec=MC[i], lw=0, zorder=4, rpad=0.09)
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Section A — Input Data
 # ═══════════════════════════════════════════════════════════════════════════════
-row_lbl(Y_DATA + H_DATA / 2, "Input\nData")
 
 TILE_M = 0.14
 
@@ -195,7 +179,6 @@ for i, cx in enumerate(COL_X):
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section B — Input Format
 # ═══════════════════════════════════════════════════════════════════════════════
-row_lbl(Y_FORM + H_FORM / 2, "Input\nFormat")
 
 FORM_TXT = [
     "Discrete ICD token sequence\n[D1  D2  ...  Dn  [DEAD?]]",
@@ -213,7 +196,6 @@ for i, (cx, txt) in enumerate(zip(COL_X, FORM_TXT)):
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section C — Encoder / Architecture
 # ═══════════════════════════════════════════════════════════════════════════════
-row_lbl(Y_ENC + H_ENC / 2, "Encoder /\nArchitecture")
 
 for i, cx in enumerate(COL_X):
     box(cx, Y_ENC, COL_W, H_ENC, "",
@@ -333,7 +315,6 @@ for i, cx in enumerate(COL_X):
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section E — Output
 # ═══════════════════════════════════════════════════════════════════════════════
-row_lbl(Y_OUT + H_OUT / 2, "Output")
 
 OUT_TXT = [
     "S(t) survival curve\n(zero-shot)",

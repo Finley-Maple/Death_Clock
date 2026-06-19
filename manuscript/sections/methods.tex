@@ -34,22 +34,19 @@ Fig.~\ref{fig:overview} shows the full design.
   \centering
   \includegraphics[width=\textwidth]{figures/figure_1}
   \caption{Overview of the five experimental settings and their encoding pipelines.
-           \textbf{S1 (Baseline CoxPH)}: raw features are first passed through a
-           preprocessing step that performs discretisation and standardisation
-           to extract a 39-dimensional numeric vector, which is then fed
-           directly to CoxPH.
+           \textbf{S1 (Baseline CoxPH)}: raw features are discretised and
+           standardised by a preprocessing step, then concatenated into a
+           39-dimensional numeric vector fed directly to CoxPH.
            \textbf{S2 (Delphi)}: age-tagged ICD tokens are fed to a GPT-based
            generative transformer in zero-shot mode.
-           \textbf{S3 Prose}: disease history is serialised as natural-language
-           sentences and encoded by a frozen LLM; the resulting embedding is
-           fused with raw features via concatenation.
-           \textbf{S3-Full (Full Prose)}: all modalities, including demographics,
-           lab values with units, comorbidity flags, and chronological disease
-           history, are combined into a single clinical paragraph and encoded by
-           the LLM with no raw features concatenated at evaluation time.
-           \textbf{S4}: age values are mapped to a continuous sinusoidal encoding
-           in parallel with ICD token embeddings; the two streams are concatenated
-           per event, mean-pooled, and fused with raw features.}
+           \textbf{S3}: disease history is serialised as natural-language
+           sentences and encoded by a frozen LLM; the embedding is fused with
+           raw features via concatenation.
+           Setting~3-Full is a variant in which all modalities are written as
+           a single prose paragraph and encoded without raw feature fusion.
+           \textbf{S4}: age values are mapped to a continuous sinusoidal
+           encoding in parallel with ICD token embeddings; the two streams are
+           concatenated per event, mean-pooled, and fused with raw features.}
   \label{fig:overview}
 \end{figure}
 
@@ -77,19 +74,13 @@ of increasing temporal and modality richness:
   \item \textbf{Isolated temporal prose (Setting 3).}
         The same ICD events are serialised as natural-language sentences:
         \textit{``At age 44.0, patient was diagnosed with J45 vasomotor
-        rhinitis.''}\
+        rhinitis.''}
         Demographics and biomarkers are provided as a separate numeric
         feature block and fused with the embedding at evaluation time.
-
-  \item[(3-Full).] \textbf{Full-text prose (Setting~3-Full).}
-        All four modalities are combined into a single paragraph:
-        demographics, lab values with units, comorbidity flags, and disease
-        history in chronological prose.
-        Unlike Setting~3, no raw feature block is fused at evaluation time;
-        the embedding alone is fed to CoxPH.
-        This is the only setting in which numeric biomarker values appear
-        directly in the text.
-  \addtocounter{enumi}{-1}
+        A variant, Setting~3-Full, combines all four modalities into a single
+        prose paragraph, including demographics, lab values with units,
+        comorbidity flags, and chronological disease history, and encodes the
+        full text without any raw feature fusion.
 
   \item \textbf{Decoupled time and event (Setting 4).}
         Age at diagnosis and the ICD token are encoded in parallel, separate
