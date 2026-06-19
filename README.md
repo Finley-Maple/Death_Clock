@@ -1,255 +1,191 @@
-# Death Prediction Pipeline
+# Death Clock — Temporal Encoding for Mortality Risk Stratification
 
-Predict **death after age 60** using patient features and disease history before age 60, evaluated across four methods.
+Code for the paper:
 
-## Methods
+> **Temporal Structure for Mortality Risk Stratification: Evaluating Encoding Strategies Across LLM Paradigms on UK Biobank**
+> [[manuscript repo]](https://github.com/Finley-Maple/Death_Clock_Draft)
 
-| # | Method | Description |
-|---|--------|-------------|
-| 1 | **Delphi** | Generative transformer for health trajectories; predicts "Death" token probability. Evaluated with DeLong AUC. |
-| 2 | **Benchmarking (CoxPH)** | CoxPH survival model on binary disease features + baseline biomarkers. Evaluated with C-index and time-dependent AUC. |
-| 3 | **Text Embedding + CoxPH** | Convert disease history to natural language, embed with Qwen3-Embedding, combine with baselines, fit CoxPH. |
-| 4 | **Trajectory Embedding + CoxPH** | Delphi-style token + age embeddings (sin/cos), pool across events, combine with baselines, fit CoxPH. |
+We study how *temporal encoding* of electronic health records (ICD-10 trajectories, biomarkers, demographics) affects all-cause mortality prediction in a UK Biobank respiratory disease subgroup (n=124,158, age ≥60, event rate 26.2%). Five input-representation settings are evaluated under a uniform CoxPH survival head, with encoder architecture and fusion method as secondary ablations (12 cells total).
+
+---
+
+## Five-Setting Experiment Matrix
+
+| Setting | Input representation | Encoder | Fusion |
+|---------|----------------------|---------|--------|
+| **S1** — Cross-sectional CoxPH | 39-dim numeric vector (biomarkers, demographics, comorbidities) | — | — |
+| **S2** — Delphi zero-shot | Ordinal ICD token stream `44yr:J45 → 52yr:F32 → …` | Delphi (generative transformer) | — |
+| **S3** — Isolated temporal prose | Natural-language sentences per event | Qwen3-8B / Bio_ClinicalBERT | concat / sum |
+| **S4** — Decoupled time + event | 128-dim sinusoidal age encoding ∥ ICD token embedding, mean-pooled | Qwen3-8B / Bio_ClinicalBERT | concat / sum |
+| **S5** — Unified summary prose | Single paragraph: demographics + lab values + disease history | Qwen3-8B / Bio_ClinicalBERT | none (embedding only) |
+
+**Reference configuration** for S3/S4: Qwen3-8B + concatenation fusion.  
+**Fusion (S3–S4):** concatenation = PCA(embedding → 64-dim) ∥ 39-dim raw → 103-dim CoxPH input; summation = PCA(embedding → 60-dim) + 60-dim standardised raw → 60-dim CoxPH input.
+
+### Key results (test set)
+
+| Setting | C-index | IBS | Mean TD-AUC |
+|---------|---------|-----|-------------|
+| S1 — Baseline CoxPH | 0.6191 | 0.1410 | 0.5999 |
+| S2 — Delphi | 0.6161 | 0.1846 | 0.5984 |
+| S3 — Prose (Qwen·concat) | 0.6156 | 0.1409 | 0.6074 |
+| **S4 — Decoupled (Qwen·concat)** | **0.6233** | 0.1410 | 0.5991 |
+| S5 — Unified prose (Qwen) | 0.6195 | **0.1408** | **0.6128** |
+
+S4 vs S3 bootstrap ΔC = +0.008, 95% CI (+0.005, +0.010), p < 0.001.
+
+---
 
 ## Directory Structure
 
 ```
-├── benchmarking/           # Survival data preprocessing & CoxPH training
-│   ├── preprocess_diagnosis.py         # Extract disease features from UKB
-│   ├── preprocess_survival.py          # Build survival dataset (event_flag, duration_days)
-│   ├── autoprognosis_survival_dataset.csv  # Output: survival dataset
-│   └── disease_before60_features.csv       # Output: binary disease flags
-├── Delphi/                 # Delphi model, training & evaluation code
-│   ├── model.py, train.py, utils.py    # Core Delphi code
-│   └── evaluate_auc.py                 # AUC evaluation via DeLong
-├── embedding/              # Embedding extraction (methods 3 & 4)
-│   ├── qwen_embedding.py              # Qwen text-only embedding (method 3 tokens / method 4 texts)
-│   └── trajectory_embedding.py        # Token+age embedding pipeline (method 4)
-├── preprocessing/          # Preprocessing for embedding inputs
-│   ├── generate_disease_trajectory.py  # Build age-at-diagnosis matrix (disease_trajectory.csv)
-│   ├── generate_trajectory_text.py     # Convert matrix → Delphi-style trajectory text per patient
-│   └── natural_text_conversion.py      # Convert tabular data → natural-language text per patient
-├── evaluation/             # Unified evaluation & comparison
-│   ├── cohort_split.py                 # Define shared train/val/test split
-│   ├── evaluate_delphi.py              # Evaluate Delphi on shared cohort
-│   ├── evaluate_benchmarking.py        # Train & evaluate CoxPH on shared cohort
-│   ├── evaluate_embedding_survival.py  # Train & evaluate CoxPH on embeddings
-│   └── unified_evaluation.py           # Compare all methods in one table
-├── data/                   # Raw & processed data (gitignored)
-├── UKB_extraction/         # UK Biobank data extraction tools
-├── docs/                   # Proposals, references
-└── run_pipeline.sh         # One-command pipeline runner (steps 1–7)
+├── embedding/                      # Embedding extraction (S3–S5)
+│   ├── qwen_embedding.py           # Qwen3-Embedding extractor (S3, S5 texts; S4 tokens)
+│   ├── clinical_bert_embedding.py  # Bio_ClinicalBERT extractor
+│   └── trajectory_embedding.py     # Decoupled age+token pipeline (S4)
+├── preprocessing/                  # Input serialisation
+│   ├── natural_text_conversion.py  # EHR → prose sentences (S3/S5)
+│   └── generate_trajectory_text.py # EHR → Delphi-style token stream (S2/S4)
+├── evaluation/                     # Evaluation & metrics
+│   ├── evaluate_benchmarking.py    # S1: CoxPH on raw features
+│   ├── evaluate_delphi.py          # S2: Delphi zero-shot
+│   ├── evaluate_embedding_survival.py  # S3–S5: embedding + CoxPH
+│   ├── bootstrap_compare.py        # Paired bootstrap CIs and p-values
+│   ├── unified_evaluation.py       # Aggregate all results
+│   ├── plot_comparison.py          # Figure 2a: reference-config bar chart
+│   ├── plot_task_illustration.py   # Figure 0: prediction task schematic
+│   └── plot_age_encoding.py        # Sinusoidal age encoding visualisation
+├── benchmarking/                   # Survival dataset preprocessing
+├── Delphi/                         # Delphi model code (Shmatko et al. 2024)
+├── scripts/                        # Batch embedding run scripts
+├── data/                           # Raw & processed data (gitignored — UKB data)
+└── manuscript/                     # LaTeX source (see Death_Clock_Draft repo)
 ```
 
-## Quick Start (one command)
+> **Data privacy:** All UK Biobank participant data lives in `data/` which is gitignored. No eids or individual-level records are committed to this repository.
 
-Run the entire pipeline end-to-end with `run_pipeline.sh`:
+---
+
+## Pipeline
+
+### 0. UKB data extraction
+
+Extract raw UK Biobank fields into `data/`. See `UKB_extraction/` for tooling.  
+Required fields: `p41202`, `p41204`, `p41270` (hospital episode statistics); demographic and biomarker fields.
+
+### 1. Build survival dataset
 
 ```bash
-# Local / CPU: 10k sample, Qwen3-Embedding-0.6B (auto-selected)
-bash run_pipeline.sh
-
-# Full dataset, auto-selects model based on device
-bash run_pipeline.sh --full
-
-# GPU server: full dataset, 8B model
-bash run_pipeline.sh --full --embedding-model Qwen/Qwen3-Embedding-8B
-
-# Mid-range GPU: 4B model
-bash run_pipeline.sh --full --embedding-model Qwen/Qwen3-Embedding-4B
-
-# Skip preprocessing if data already exists
-bash run_pipeline.sh --skip-preprocess --steps 5,6,7
-
-# Skip Delphi (if no checkpoint available)
-bash run_pipeline.sh --skip-delphi
+python benchmarking/preprocess_survival.py     # → data/preprocessed/autoprognosis_survival_dataset.csv
+python benchmarking/preprocess_diagnosis.py    # → data/preprocessed/disease_before60_features.csv
 ```
 
-Options:
-
-| Flag | Description |
-|------|-------------|
-| `--full` | Use all participants instead of a 10k sample |
-| `--sample-size N` | Custom sample size (default: 10000) |
-| `--embedding-model MODEL` | Qwen3-Embedding-0.6B/4B/8B (auto-selected by device) |
-| `--token-mode random\|qwen` | Trajectory token embedding mode (default: random) |
-| `--skip-preprocess` | Skip steps 1-2 if CSV files already exist |
-| `--skip-delphi` | Skip Delphi evaluation |
-| `--steps 1,2,3,...` | Run only specific steps |
-| `--device cuda\|cpu` | Force device (auto-detected by default) |
-| `--random-state N` | Random seed (default: 42) |
-
-The script logs everything to `pipeline_YYYYMMDD_HHMMSS.log` and prints the comparison table at the end.
-
-**Embedding model load error:** If you see `Can't load the configuration of 'Qwen/Qwen3-Embedding-0.6B'`, the code will retry with a fresh download and then fall back to `sentence-transformers` if needed. Install the fallback with: `pip install sentence-transformers`. Ensure no local folder named `Qwen` exists in the current working directory, and that you have network access to Hugging Face.
-
-## Pipeline (step by step)
-
-### Step 0: UKB data extraction
-
-Extract raw UK Biobank data into `data/`. See `UKB_extraction/` for tooling.
-
-### Step 1: Build survival dataset & disease features
-
-These scripts produce the two CSV files that all downstream steps depend on.
-
-```bash
-python benchmarking/preprocess_diagnosis.py    # → disease_before60_features.csv
-python benchmarking/preprocess_survival.py     # → autoprognosis_survival_dataset.csv (10k sample)
-# Or use the full dataset:
-python benchmarking/preprocess_survival.py --all
-```
-
-### Step 2: Build disease trajectory matrix
-
-Generate per-patient age-at-diagnosis for all diseases (needed by method 4).
-
-```bash
-python preprocessing/generate_disease_trajectory.py   # → data/preprocessed/disease_trajectory.csv
-```
-
-### Step 3: Define shared cohort split
-
-Create a single train/val/test split (70/15/15, stratified) used by all methods.
+### 2. Define shared cohort split (70 / 15 / 15, stratified)
 
 ```bash
 python evaluation/cohort_split.py              # → evaluation/cohort_split.json
 ```
 
-### Step 4: Generate embedding inputs & Delphi binary data
-
-**Method 3 (text embedding):** convert trajectory data to disease-history text with age at diagnosis (e.g. "At age 20.3, patient was diagnosed with G43 migraine."). Only disease events are included; demographics and biomarkers are added as numeric features during survival model training.
+### 3. Serialise inputs
 
 ```bash
+# S3 / S5 — prose sentences
 python preprocessing/natural_text_conversion.py \
     --trajectory-csv data/preprocessed/disease_trajectory.csv \
-    --output-csv     data/preprocessed/text_before60.csv \
-    --output-dir     data/preprocessed/text_before60
-```
+    --output-csv     data/preprocessed/text_before60.csv
 
-**Method 4 (trajectory embedding):** convert trajectory matrix to Delphi-style text.
-
-```bash
+# S2 / S4 — age-tagged token stream
 python preprocessing/generate_trajectory_text.py \
-    --output-csv  data/preprocessed/trajectory_before60.csv \
-    --output-dir  data/preprocessed/trajectory_before60
+    --output-csv  data/preprocessed/trajectory_before60.csv
 ```
 
-**Method 1 (Delphi binary data):** convert trajectory + demographics to Delphi binary format, aligned with the shared cohort split.
+### 4. Compute embeddings (S3–S5)
 
 ```bash
-python Delphi/preprocess_delphi_binary.py \
-    --output-dir  Delphi/data/ukb_respiratory_data
-```
-
-This generates `train.bin`, `val.bin`, `test.bin` using the same patient splits as all other methods.
-
-### Step 5: Compute embeddings
-
-**Method 3:** embed natural-language texts with Qwen3-Embedding.
-
-```bash
-# GPU server (8B, 4096-dim):
+# Qwen3-8B — prose texts (S3 / S5), GPU server
 python embedding/qwen_embedding.py \
-    --input-csv   data/preprocessed/text_before60.csv \
-    --output-dir  data/preprocessed/embeddings_text \
-    --model-name  Qwen/Qwen3-Embedding-8B
+    --input-csv  data/preprocessed/text_before60.csv \
+    --output-dir data/preprocessed/embeddings_text \
+    --model-name Qwen/Qwen3-Embedding-8B
 
-# Local / CPU (0.6B, 1024-dim):
-python embedding/qwen_embedding.py \
-    --input-csv   data/preprocessed/text_before60.csv \
-    --output-dir  data/preprocessed/embeddings_text \
-    --model-name  Qwen/Qwen3-Embedding-0.6B \
-    --no-flash-attn
+# Qwen3-8B — decoupled trajectory (S4)
+python embedding/trajectory_embedding.py \
+    --input-csv  data/preprocessed/trajectory_before60.csv \
+    --output-dir data/preprocessed/embeddings_traj \
+    --token-mode qwen \
+    --model-name Qwen/Qwen3-Embedding-8B
+
+# Bio_ClinicalBERT — prose texts (S3 / S5)
+python embedding/qwen_embedding.py \      # calls clinical_bert_embedding internally via --encoder bcb
+    ...                                   # or run clinical_bert_embedding.py directly
 ```
 
-**Method 4:** embed trajectory token+age vectors.
+Batch scripts for all 12 cells are in `scripts/`.
+
+### 5. Evaluate
 
 ```bash
-# Random token embeddings (CPU, for testing):
-python embedding/trajectory_embedding.py \
-    --input-csv   data/preprocessed/trajectory_before60.csv \
-    --output-dir  data/preprocessed/embeddings_traj
+# S1
+python evaluation/evaluate_benchmarking.py
 
-# Or with Qwen token embeddings (GPU):
-python embedding/trajectory_embedding.py \
-    --input-csv   data/preprocessed/trajectory_before60.csv \
-    --output-dir  data/preprocessed/embeddings_traj \
-    --token-mode  qwen
-```
+# S2
+python evaluation/evaluate_delphi.py --split test --save-preds
 
-### Step 6: Train & evaluate each method
-
-Each evaluation script trains on the shared train split and evaluates on val/test.
-
-```bash
-# Method 1: Delphi (requires step 4 Delphi binary data)
-python evaluation/evaluate_delphi.py \
-    --split test \
-    --save-preds \
-    --horizons-days 365 1825
-
-# Method 2: Benchmarking (CoxPH on binary disease features)
-python evaluation/evaluate_benchmarking.py \
-    --baseline-mode all
-
-# Method 3: Text Embedding + CoxPH
+# S3 / S4 (concat)
 python evaluation/evaluate_embedding_survival.py \
     --embedding-dir data/preprocessed/embeddings_text \
-    --tag patient \
-    --method-name text_embedding \
-    --baseline-mode all
+    --method-name s3_qwen_concat \
+    --baseline-mode all --fusion concat
 
-# Method 4: Trajectory Embedding + CoxPH
+# S5
 python evaluation/evaluate_embedding_survival.py \
-    --embedding-dir data/preprocessed/embeddings_traj \
-    --tag trajectory \
-    --method-name trajectory_embedding \
+    --embedding-dir data/preprocessed/embeddings_text \
+    --method-name s5_qwen \
     --baseline-mode none
 ```
 
-Each evaluator now shares the same CLI options:
-
-- `--baseline-mode {all, none, custom}` (and `--baseline-cols ...`) to control which survival covariates are concatenated with embeddings.
-- `--survival-csv` / `--cohort-json` to point at alternative datasets or splits.
-- `--save-preds` to dump per-split risk scores in `evaluation/*/predictions/`.
-- Delphi adds `--horizons-days` to override the default quantile-based horizons and aligns its risk outputs with the shared survival metrics.
-
-### Step 7: Unified comparison
+### 6. Bootstrap confidence intervals
 
 ```bash
-python evaluation/unified_evaluation.py        # → evaluation/unified_comparison.csv
+python evaluation/bootstrap_compare.py \
+    --n-resamples 1000 --seed 42    # → evaluation/bootstrap_results.json
 ```
+
+### 7. Unified comparison table
+
+```bash
+python evaluation/unified_evaluation.py    # → evaluation/unified_comparison.csv / .json
+```
+
+---
 
 ## Requirements
 
-Python 3.9+. Install all dependencies at once:
-
-```bash
-pip install -r requirements.txt
-```
-
-For GPU (CUDA), install PyTorch with CUDA first:
+Python 3.9+, PyTorch ≥ 2.4.0.
 
 ```bash
 pip install torch --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 ```
 
-Key dependencies and what uses them:
+Key packages:
 
 | Package | Version | Used by |
 |---------|---------|---------|
-| `torch` | >=2.4.0 | Delphi, Qwen3-Embedding |
-| `transformers` | >=4.51.0 | Qwen3-Embedding (methods 3 & 4) |
-| `lifelines` | >=0.27.0 | CoxPH models (methods 2, 3, 4) |
-| `scikit-survival` | >=0.22.0 | Time-dependent AUC evaluation |
-| `numpy` | >=1.24.0 | All components |
-| `pandas` | >=2.0.0 | All components |
+| `torch` | ≥2.4.0 | Delphi, Qwen3-Embedding |
+| `transformers` | ≥4.53.0 | Qwen3-8B, Bio_ClinicalBERT |
+| `lifelines` | ≥0.27.0 | CoxPH (S1, S3–S5) |
+| `scikit-survival` | ≥0.22.0 | TD-AUC, IBS |
+| `numpy` | <2.0 | All components |
 
-See also: `Delphi/requirements.txt` (original Delphi deps), `embedding/requirements_qwen.txt` (Qwen-specific).
+> **Server note:** `torchvision` must be uninstalled on shared GPU servers to avoid import conflicts with `transformers`. The embedding scripts handle this automatically.
 
-## TODOs
+---
 
-1. traj_before60: add hints for LLM to understand the text
-2. text_before60: add timepoints for alcohol and smoking
+## Citation
+
+If you use this code, please cite:
+
+```
+[BibTeX to be added upon publication]
+```
