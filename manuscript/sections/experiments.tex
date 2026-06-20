@@ -64,7 +64,7 @@ S4 — Decoupled time     & BCB · sum      & 0.5955 & 0.1413 & 0.5868 & 0.583 &
   \label{fig:ref_bars}
 \end{figure}
 
-\paragraph{Finding 1: Temporal ordering is the critical structural property.}
+\paragraph{Finding 1: Explicit temporal encoding yields a consistent discrimination gain.}
 Setting 4 achieves the best Harrell C-index among the reference configurations (0.6233),
 exceeding S1 by $+$0.004 and S3 by $+$0.008.
 Both S3 and S4 use Qwen3-8B with concatenation fusion and the same 39 raw
@@ -92,7 +92,7 @@ Delphi (S2) achieves C\,=\,0.6161 but calibration is substantially worse
 (IBS\,=\,0.185 vs.\ $\approx$0.141 for CoxPH variants).
 Its TD-AUC rises from 0.52 at 9.5\,yr to 0.65 at 19.7\,yr
 (Fig.~\ref{fig:horizon}), suggesting chronic disease priors that align
-poorly with near-term acute mortality.
+poorly with shorter-horizon acute mortality.
 
 \begin{figure}[H]
   \centering

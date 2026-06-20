@@ -3,22 +3,25 @@
 We have presented a controlled three-axis study of LLM-based and classical
 survival prediction for all-cause mortality on a UK Biobank respiratory
 disease subgroup ($n\,=\,124{,}158$).
-By varying input representation (4 settings), encoder architecture (2
-encoders), and feature fusion method (2 fusion strategies) under a uniform
-CoxPH survival head, we isolate which structural encoding choices drive
-prediction quality.
+By varying input representation (4 representation families, 5 configurations),
+encoder architecture (2 encoders), and feature fusion method (2 strategies)
+under a uniform CoxPH survival head, we isolate which structural encoding
+choices drive prediction quality.
 
 Three findings stand out.
-First, \emph{temporal ordering is the critical structural property}:
-decoupled age--event encoding (Setting 4) outperforms prose serialisation
-of identical events by $+$0.008 C-index, regardless of encoder or fusion.
+First, \emph{explicit geometric time separation provides a small but
+statistically consistent gain}: decoupled age--event encoding (Setting 4)
+outperforms prose serialisation of identical events by $+$0.008 C-index
+(bootstrap 95\,\% CI: $+$0.005 to $+$0.010) for the Qwen3-8B encoder.
 Second, \emph{general-purpose LLMs implicitly encode numeric biomarker
 structure}: a Qwen3-8B prose embedding without any raw numeric features
-matches a fully supervised 39-feature CoxPH, with superior TD-AUC.
-Third, \emph{autoregressive generation has a structural calibration
-gap}: Delphi's near-term AUC collapse and high Brier score reveal that
-pre-trained EHR LLMs without task-specific grounding are insufficient for
-calibrated risk stratification.
+matches a fully supervised 39-feature CoxPH, with superior mean TD-AUC
+(0.613 vs.\ 0.600).
+Third, \emph{zero-shot autoregressive generation exhibits a calibration
+gap under distribution shift}: Delphi's AUC collapse at the earliest
+evaluated horizon and high Brier score caution against deploying
+pre-trained EHR LLMs without access to acute biomarker data or
+task-specific calibration.
 
 Together, these findings confirm that \emph{how} temporal structure is
 encoded matters more than which specific LLM encodes it, corroborated by

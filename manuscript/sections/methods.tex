@@ -33,7 +33,7 @@ Fig.~\ref{fig:overview} shows the full design.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{figures/figure_input_encoding}
-  \caption{Overview of the five experimental settings and their encoding pipelines.
+  \caption{Overview of the five experimental configurations and their encoding pipelines.
            \textbf{S1 (Baseline CoxPH)}: raw features are discretised and
            standardised by a preprocessing step, then concatenated into a
            39-dimensional numeric vector fed directly to CoxPH.
@@ -51,8 +51,9 @@ Fig.~\ref{fig:overview} shows the full design.
 \end{figure}
 
 \paragraph{Input Representation (4 representation families).}
-Patient data before age 60 is serialised into five distinct representations
-of increasing temporal and modality richness:
+Patient data before age 60 is serialised into five distinct configurations
+across four representation families, of increasing temporal and modality
+richness:
 
 \begin{enumerate}
   \item \textbf{Cross-sectional (Setting 1).}
@@ -150,7 +151,7 @@ We report four metrics on the held-out test set:
 (iii) Integrated Brier Score (IBS, lower is better), measuring calibration;
 (iv) \emph{Bootstrap confidence intervals:} 1{,}000 paired resamples of the test set to compute 95\% CIs for C-index and paired difference $p$-values for key contrasts (S4 vs.\ S3, S4 vs.\ S1, S3-Full vs.\ S1).
 All metrics are computed with \texttt{lifelines} and \texttt{scikit-survival}.
-No information leakage: PCA projections (both axes B and C) and CoxPH
-coefficients are fitted on training splits only; val and test transforms
-use the training-fit parameters.
+No information leakage: PCA projections and CoxPH coefficients are fitted
+on the training split only; validation and test transforms use
+training-fit parameters.
 

@@ -57,8 +57,9 @@ disease subgroup ($n\,=\,124{,}158$)~\cite{cao2025respiratoryburden,cao2026copd}
 a population where mortality prediction is especially challenging due to
 multimorbidity burden and heterogeneous temporal disease trajectories~\cite{ukbmdrmf}.
 Our primary dimension varies \emph{input representation} across five
-temporal-encoding settings, from cross-sectional bag-of-features to fully
-unified clinical prose, all under a uniform CoxPH survival head.
+experimental configurations spanning four representation families, from
+cross-sectional bag-of-features to unified clinical prose, all under a
+uniform CoxPH survival head.
 To verify that findings generalise beyond a single implementation, we include
 two ablations: \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT)
 and \emph{feature fusion method} (concatenation vs.\ element-wise summation).
@@ -87,8 +88,8 @@ Our main contributions are:
         acute biomarker inputs.
 
   \item Ablation evidence that encoder choice and fusion method are
-        secondary to serialisation format: Bio\_ClinicalBERT and Qwen3-8B
-        differ by at most 0.007 C-index within each setting (0.001 in
-        Setting~4); concatenation outperforms summation by
-        $+$0.028--$+$0.039.
+        secondary to serialisation format: among reference (concat)
+        configurations, Bio\_ClinicalBERT and Qwen3-8B differ by at most
+        0.007 C-index (less than 0.001 in Setting~4); concatenation
+        outperforms summation by $+$0.028--$+$0.039.
 \end{itemize}
