@@ -145,12 +145,18 @@ S4 BCB concat  & S3 BCB concat  & $+$0.0007 & ($+$0.000, $+$0.001) & 0.001    \\
 \end{tabular}
 \end{table}
 
+A note on CI display: intervals in Table~\ref{tab:boot_contrasts} are rounded
+to 3 decimal places; the narrow S4~vs.~S1 width ($\approx$0.001) reflects the
+large test set ($n$\,=\,18{,}623) rather than an implausibly tight bootstrap.
+Pairing is implemented by using the same random index resample for all methods
+within each replicate, so difference CIs capture within-resample covariance.
+
 The contrasts confirm two claims.
 First, S4 (decoupled temporal encoding) significantly improves over S1
 ($\Delta$C\,$\approx$\,$+$0.004, both encoders, $p<0.001$).
-The difference is small but highly consistent across resamples: the CI lower
-bound ($+$0.004) is comfortably above zero, indicating the gap is not a
-statistical artefact.
+The difference is small but consistent: the CI lower bound ($+$0.004) is
+above zero, indicating the gap is not a statistical artefact; the narrow
+CI width is expected given the test-set size.
 Second, the S4-vs-S3 contrast isolates temporal serialisation as the cause:
 for Qwen3-8B, $\Delta$C\,=\,$+$0.008 with CI\,=\,($+$0.005, $+$0.010),
 $p<0.001$.
@@ -178,6 +184,9 @@ decoupling.
 S3-Full·BCB achieves the highest raw C-index (0.6371) yet near-chance TD-AUC
 (0.507): BCB's 512-token limit truncates the disease-history tail, an
 implementation-sensitive artefact; we exclude it from headline claims.
+Censoring weights and evaluation time grids are shared across all methods
+in the evaluation pipeline, ruling out a computational cause; the metric
+inconsistency is attributed solely to 512-token truncation.
 Qwen3-8B (8192-token context) is the appropriate encoder for Setting~3-Full.
 
 \paragraph{Feature fusion.}

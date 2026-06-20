@@ -22,6 +22,11 @@ Setting 2 (Delphi's ordinal token stream) falls between S3 and S4:
 temporal ordering is preserved as positional structure in the input
 sequence, but the autoregressive hazard chain cannot separate
 ordering effects from pre-training priors (see calibration gap below).
+Absolute C-index values here (0.616--0.623 for embedding settings) are
+below the 0.65--0.68 range reported for all-cause mortality on the full
+UKB cohort~\cite{ukbmdrmf}; the gap reflects the harder discrimination
+problem of the respiratory subgroup and the restriction to features
+available before age 60, not a deficiency of the LLM encoding approach.
 
 \paragraph{Setting~3-Full: LLMs encode numeric biomarker structure from prose.}
 Setting~3-Full (full-text prose, no raw features) achieves C\,=\,0.6195,
@@ -46,9 +51,11 @@ encoder families; the temporal-ordering advantage of S4 over S3 persists
 The anomalously high S3-Full·BCB C-index (0.6371) is explained by 512-token
 truncation retaining primarily age signal, which collapses TD-AUC to 0.507.
 For fusion strategy, concatenation outperforms summation by
-$+$0.028--$+$0.039 C-index across all cells, confirming that retaining
-independent embedding dimensions alongside raw features preserves more
-representational capacity than projective fusion.
+$+$0.028--$+$0.039 C-index across all cells.
+This result should be read as evidence against the specific summation protocol
+used here (PCA projection to 39 dimensions followed by element-wise addition),
+not additive fusion in general; learned linear layers or gated fusion could
+perform differently and warrant separate evaluation.
 The primary conclusion, that serialisation format drives discrimination more
 than encoder family or fusion method, is supported across both ablations.
 
@@ -76,7 +83,13 @@ required before clinical translation.
 Bio\_ClinicalBERT's 512-token limit is an architectural constraint that
 disproportionately affects Setting~3-Full; future work should evaluate
 longer-context clinical encoders.
+Setting~4 uses mean pooling of per-event representations; attention-based
+or time-weighted pooling could better capture temporal risk intensity and
+may further widen the S4-vs-S3 gap.
+The specific summation fusion protocol (PCA projection plus zero-padding)
+is one instance of additive fusion; more principled alternatives such as
+learned layers or CCA-inspired projections may behave differently.
 The primary evaluation metrics (C-index, TD-AUC) measure discrimination,
 while IBS provides calibration context; patient-interpretable life-year
-estimates (RMST) and interaction with stronger survival heads are left to
-future work.
+estimates (RMST) and stronger survival-head interactions are left to future
+work.
