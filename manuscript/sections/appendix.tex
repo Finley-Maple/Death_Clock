@@ -1,0 +1,43 @@
+\section*{Appendix: Implementation and Reproducibility Details}
+\addcontentsline{toc}{section}{Appendix}
+\label{app:impl}
+
+\paragraph{Hardware and Runtime.}
+Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090
+(124{,}158 patients, $\approx$7\,h per embedding run).
+Bio\_ClinicalBERT (110M params) ran on an NVIDIA RTX\,4090 at
+$\approx$30 min per pass.
+CoxPH models were fitted on CPU with \texttt{lifelines} v0.27;
+evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
+All PCA projections and CoxPH coefficients are fitted on the training
+split only; validation and test transforms use training-fit parameters.
+\begin{sloppypar}Code and evaluation scripts:
+{\small\url{https://github.com/Finley-Maple/Death\_Clock}}.\end{sloppypar}
+
+\paragraph{Feature Dimensions.}
+Table~\ref{tab:dims} summarises the exact dimensionalities at each stage of
+the pipeline.
+The 39-variable count refers to raw clinical variables before any categorical
+encoding (demographics, 21 biomarkers, 11 binary comorbidity flags, sex,
+smoking, alcohol status); this is the input width for S1 and the raw-side
+of concatenation fusion.
+For summation fusion, categorical variables are independently standardised
+with the same 39-variable block; the PCA projection is matched to the same
+39-dimensional width so that element-wise addition is dimension-consistent.
+
+\begin{table}[H]
+\centering
+\caption{Feature and embedding dimensions by pipeline stage.}
+\label{tab:dims}
+\begin{tabular}{lll}
+\toprule
+Stage & Dimension & Description \\
+\midrule
+Raw feature block          & 39  & Demographics, biomarkers, comorbidities \\
+PCA embedding (concat)     & 64  & Fit on training split only \\
+CoxPH input (S1)           & 39  & Direct raw features \\
+CoxPH input (concat)       & 103 & 39 raw $+$ 64 PCA \\
+Summation fusion output    & 39  & PCA matched to raw feature width \\
+\bottomrule
+\end{tabular}
+\end{table}

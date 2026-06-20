@@ -50,7 +50,7 @@ Fig.~\ref{fig:overview} shows the full design.
   \label{fig:overview}
 \end{figure}
 
-\paragraph{Input Representation (4 settings).}
+\paragraph{Input Representation (4 representation families).}
 Patient data before age 60 is serialised into five distinct representations
 of increasing temporal and modality richness:
 
@@ -143,19 +143,12 @@ Qwen3-8B embedding runs used an NVIDIA RTX\,3090; BCB embedding runs used
 an NVIDIA RTX\,4090.
 
 \subsection{Evaluation Protocol}
-We report five metrics on the held-out test set:
+We report four metrics on the held-out test set:
 (i) Harrell C-index (concordance, higher is better)~\cite{harrellcindex};
 (ii) mean time-dependent AUC (TD-AUC) averaged over horizons
     9.5, 15.4, and 19.7 years (higher is better);
 (iii) Integrated Brier Score (IBS, lower is better), measuring calibration;
-(iv) \emph{Restricted mean survival time} (RMST): per-patient
-    $\int_0^\tau S(t\mid x)\,\mathrm{d}t / 365.25$ (in years), restricted
-    to $\tau = $ the 80th-percentile follow-up horizon, computed via
-    trapezoidal integration over a 100-point survival curve.
-    RMST provides an interpretable calibration complement to IBS,
-    capturing whether the model's predicted life-years align with
-    the observed restricted mean under the Kaplan--Meier estimator.
-(v) \emph{Bootstrap confidence intervals:} 1{,}000 paired resamples of the test set to compute 95\% CIs for C-index and paired difference $p$-values for key contrasts (S4 vs.\ S3, S4 vs.\ S1, S3-Full vs.\ S1).
+(iv) \emph{Bootstrap confidence intervals:} 1{,}000 paired resamples of the test set to compute 95\% CIs for C-index and paired difference $p$-values for key contrasts (S4 vs.\ S3, S4 vs.\ S1, S3-Full vs.\ S1).
 All metrics are computed with \texttt{lifelines} and \texttt{scikit-survival}.
 No information leakage: PCA projections (both axes B and C) and CoxPH
 coefficients are fitted on training splits only; val and test transforms

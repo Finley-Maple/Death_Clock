@@ -13,12 +13,13 @@ configurations of ICD codes, and which numeric biomarker profiles, predict
 adverse outcomes requires detecting hierarchical, ordered patterns rather
 than simple feature co-occurrences.
 A disease trajectory is not a bag of tokens: the 8-year interval between a
-first metabolic event and a subsequent cardiovascular diagnosis carries causal
-information that token proximity alone cannot preserve.
+first metabolic event and a subsequent cardiovascular diagnosis carries
+prognostically relevant temporal structure that token proximity alone cannot
+preserve.
 How events are temporally arranged, how age is encoded as a continuous
 geometric quantity, and how numeric biomarker values are contextualised
 against clinical reference ranges together determine whether a model reads a
-patient record as an unordered feature set or as a structured causal
+patient record as an unordered feature set or as a structured temporal risk
 trajectory.
 How temporal structure is encoded is the central design question this study
 investigates.
@@ -61,26 +62,29 @@ unified clinical prose, all under a uniform CoxPH survival head.
 To verify that findings generalise beyond a single implementation, we include
 two ablations: \emph{encoder architecture} (Qwen3-8B vs.\ Bio\_ClinicalBERT)
 and \emph{feature fusion method} (concatenation vs.\ element-wise summation).
+Absolute discrimination gains are modest; the scientific value of the design
+lies in controlled isolation of which encoding choices produce statistically
+consistent differences under a uniform survival head.
 
 Our main contributions are:
 \begin{itemize}
-  \item A five-setting controlled benchmark of temporal encoding strategies
-        for LLM-based mortality prediction, the first to isolate input
-        serialisation as the sole experimental variable under a uniform
-        survival head.
+  \item A controlled benchmark of four temporal-encoding representation
+        families (five experimental configurations) for LLM-based mortality
+        prediction, the first to isolate input serialisation as the sole
+        experimental variable under a uniform survival head.
 
-  \item Evidence that \emph{temporal ordering is the critical structural
-        property}: decoupled age--event sinusoidal encoding (Setting~4)
-        achieves a $+$0.008 C-index advantage (bootstrap 95\,\% CI:
-        $+$0.005 to $+$0.010, $p<0.001$) over prose serialisation of
-        identical events.
+  \item Evidence that explicit geometric time separation provides a small
+        but statistically consistent gain: decoupled age--event sinusoidal
+        encoding (Setting~4) achieves a $+$0.008 C-index advantage (bootstrap
+        95\,\% CI: $+$0.005 to $+$0.010, $p<0.001$) over prose serialisation
+        of identical events.
 
   \item Evidence that LLMs encode numeric biomarker structure from prose:
         full-text prose embedding (Setting~3-Full) with \emph{no raw features}
-        matches a 39-feature CoxPH baseline, and that autoregressive
-        generation faces a calibration gap in acute risk stratification
-        (Delphi IBS\,=\,0.185 vs.\ 0.141, near-term AUC\,=\,0.52 at
-        9.5\,yr).
+        matches a 39-feature CoxPH baseline, and that zero-shot autoregressive
+        generation faces a calibration gap (Delphi IBS\,=\,0.185 vs.\ 0.141,
+        AUC\,=\,0.52 at the earliest evaluated horizon) partly due to missing
+        acute biomarker inputs.
 
   \item Ablation evidence that encoder choice and fusion method are
         secondary to serialisation format: Bio\_ClinicalBERT and Qwen3-8B

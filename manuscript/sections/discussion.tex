@@ -12,9 +12,9 @@ invisible to the encoder's attention mechanism.
 Decoupled encoding preserves this structure explicitly: the 128-dim
 sinusoidal age vector ensures that events at age 42 and age 52.1 are
 geometrically separated before the token embedding is appended.
-This aligns with the structured multimodal intelligence thesis:
-\emph{surface semantic encoding is insufficient when temporal causal
-structure drives the outcome.}
+This is consistent with the view that surface semantic encoding loses
+prognostically relevant temporal structure when event ordering drives
+the outcome.
 The +0.008 C-index advantage of S4 over S3 is the primary empirical claim;
 bootstrap confidence intervals confirm this gap exceeds sampling noise:
 CI\,=\,($+$0.005, $+$0.010), $p<0.001$.
@@ -30,7 +30,7 @@ numeric features.
 This suggests that Qwen3-8B's pre-training has internalised enough
 biomarker-range semantics to distinguish, e.g., HbA1c\,=\,52 from
 HbA1c\,=\,38 in terms of mortality relevance.
-The near-term TD-AUC advantage (0.605 vs.\ 0.584 at 9.5\,yr) further
+The TD-AUC advantage at the earliest evaluated horizon (0.605 vs.\ 0.584 at 9.5\,yr) further
 suggests the embedding captures interactions between biomarker values and
 disease history that a linear CoxPH on raw features misses.
 However, this encoding is \emph{implicit} and cannot be inspected or
@@ -52,17 +52,19 @@ representational capacity than projective fusion.
 The primary conclusion, that serialisation format drives discrimination more
 than encoder family or fusion method, is supported across both ablations.
 
-\paragraph{Calibration gap of autoregressive generation.}
-Delphi's IBS of 0.185 vs.\ $\approx$0.141 for CoxPH variants partly reflects
-a covariate asymmetry: Delphi has no access to HbA1c, CRP, creatinine, or
-cystatin~C, so the gap captures missing acute biomarker signal as much as a
-deficiency of the autoregressive paradigm.
-The near-term AUC collapse (0.52 at 9.5\,yr) is consistent with this: short-
-horizon mortality is dominated by physiological derangements absent from the
-ICD token stream, an inherent constraint of zero-shot deployment under
-distribution shift from pre-training to the UK Biobank cohort.
-Fine-tuning with a calibration-aware objective and numeric biomarker inputs
-would likely close this gap, but at the cost of zero-shot generalisability.
+\paragraph{Calibration gap in zero-shot deployment.}
+In our zero-shot implementation, Delphi exhibits a calibration gap
+(IBS\,0.185 vs.\ $\approx$0.141); this should not be interpreted as a
+definitive limitation of autoregressive EHR transformers, because Delphi
+receives only ICD event streams without HbA1c, CRP, creatinine, or
+cystatin~C --- the gap captures missing acute biomarker signal as much as a
+paradigm deficiency.
+The AUC collapse at the earliest evaluated horizon (0.52 at 9.5\,yr) is
+consistent with this: short-horizon mortality is dominated by physiological
+derangements absent from the ICD stream under distribution shift from
+pre-training.
+Fine-tuning with biomarker inputs and a calibration-aware objective would
+likely close this gap, at the cost of zero-shot generalisability.
 
 \paragraph{Limitations.}
 All embedding methods freeze their encoders; fine-tuning may yield
@@ -74,6 +76,7 @@ required before clinical translation.
 Bio\_ClinicalBERT's 512-token limit is an architectural constraint that
 disproportionately affects Setting~3-Full; future work should evaluate
 longer-context clinical encoders.
-The primary evaluation metrics (C-index, TD-AUC) measure discrimination; IBS and
-RMST ($\int_0^\tau S(t\mid x)\,\mathrm{d}t$) complement these with calibration
-and patient-interpretable life-year estimates respectively.
+The primary evaluation metrics (C-index, TD-AUC) measure discrimination,
+while IBS provides calibration context; patient-interpretable life-year
+estimates (RMST) and interaction with stronger survival heads are left to
+future work.

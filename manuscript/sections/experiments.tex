@@ -1,13 +1,8 @@
 \section{Experiments and Results}
 
 \subsection{Implementation Details}
-Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090
-(124{,}158 patients, $\approx$7\,h per embedding run).
-Bio\_ClinicalBERT (110M params) runs on the same GPU at
-$\approx$30 min per pass.
-CoxPH models were fitted on CPU with \texttt{lifelines} v0.27.
-Evaluation used \texttt{scikit-survival} for TD-AUC and IBS.
-\begin{sloppypar}Code and evaluation scripts are available at {\small\url{https://github.com/Finley-Maple/Death\_Clock}}.\end{sloppypar}
+Hardware, runtime, software versions, and exact feature dimensions are
+provided in Appendix~\ref{app:impl} for reproducibility.
 
 \subsection{Main Results: Representation Axis}
 
@@ -180,19 +175,19 @@ The temporal-ordering advantage (S4 over S3) persists for Qwen
 ($\Delta$C\,=\,$+$0.001), suggesting BCB's local attention partially
 captures ordinal structure from prose, reducing the benefit of explicit
 decoupling.
-S3-Full·BCB achieves the highest C-index (0.6371) yet near-chance TD-AUC
-(0.507): BCB's 512-token limit truncates the disease-history tail, retaining
-a strong age signal but losing temporal variation.
-Qwen3-8B (8192-token context) is therefore the appropriate encoder for
-Setting~3-Full.
+S3-Full·BCB achieves the highest raw C-index (0.6371) yet near-chance TD-AUC
+(0.507): BCB's 512-token limit truncates the disease-history tail, an
+implementation-sensitive artefact; we exclude it from headline claims.
+Qwen3-8B (8192-token context) is the appropriate encoder for Setting~3-Full.
 
 \paragraph{Feature fusion.}
 Concatenation uniformly outperforms summation by $+$0.028--$+$0.039
 C-index (Table~\ref{tab:full}).
-Summation projects the embedding to 60 dimensions before adding raw
-features, discarding information orthogonal to the leading principal
-components; concatenation retains 64 independent embedding dimensions
-alongside all 60 raw features.
+Summation PCA-projects the embedding to 39 dimensions to match the
+39-dimensional raw feature block, then adds element-wise; this discards
+information orthogonal to the leading principal components.
+Concatenation retains 64 independent PCA embedding dimensions alongside
+the same 39 raw features, forming a 103-dimensional CoxPH input.
 Summation variants (0.584--0.596) fall below the S1 baseline (0.619).
 Concatenation variants span 0.616--0.624; S3·Qwen (0.616) falls marginally
 below S1, while the BCB and S4 variants (0.622--0.623) exceed it, making
