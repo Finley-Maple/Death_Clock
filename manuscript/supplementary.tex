@@ -1,0 +1,192 @@
+% manuscript/supplementary.tex
+% Standalone supplementary material — compile independently with pdflatex.
+\documentclass[runningheads]{llncs}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Supplementary Material: Temporal Structure for Mortality Risk
+       Stratification: Evaluating Encoding Strategies Across LLM Paradigms
+       on UK Biobank}
+\titlerunning{Supplementary — Temporal Encoding for Mortality Risk}
+\authorrunning{[Authors]}
+\author{[Authors]}
+\institute{[Institution]}
+\maketitle
+
+\setcounter{section}{0}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Implementation and Reproducibility Details}
+\label{supp:impl}
+
+\paragraph{Hardware and Runtime.}
+Qwen3-8B embeddings were generated on an NVIDIA RTX\,3090 (124{,}158 patients,
+$\approx$7\,h per embedding run using \texttt{sentence-transformers}).
+Bio\_ClinicalBERT (110M params) ran on an NVIDIA RTX\,4090 at $\approx$30\,min
+per pass.
+CoxPH models were fitted on CPU with \texttt{lifelines} v0.27; evaluation
+used \texttt{scikit-survival} v0.22 for TD-AUC and IBS.
+PCA for concatenation fusion and all CoxPH coefficients are fitted on the
+training split only; validation and test transforms use training-fit
+parameters.
+\begin{sloppypar}
+Code and evaluation scripts are available at:
+{\small\url{https://github.com/Finley-Maple/Death\_Clock}}.
+\end{sloppypar}
+
+\paragraph{Software Environment.}
+Key package versions: Python\,3.10, PyTorch\,2.1, \texttt{transformers}\,4.53,
+\texttt{lifelines}\,0.27, \texttt{scikit-survival}\,0.22,
+\texttt{scikit-learn}\,1.4, \texttt{numpy}\,1.26.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Feature Dimensions}
+\label{supp:dims}
+
+Table~\ref{tab:supp_dims} summarises the exact dimensionalities at each stage
+of the pipeline.
+The 39-variable count refers to raw clinical variables before any categorical
+encoding (1 age, 1 sex, 1 BMI, 1 smoking status, 1 alcohol status, 1 living
+alone, 21 blood biomarkers, 11 binary comorbidity flags).
+For S1, these are directly standardised and fed to CoxPH.
+For Settings 3 and 4 with concatenation fusion, the 39 raw features are
+appended to a 64-dimensional PCA-compressed embedding, forming a 103-dimensional
+CoxPH input.
+For summation fusion, the embedding is PCA-projected to 39 dimensions to match
+the raw feature block, then added element-wise.
+
+\begin{table}[H]
+\centering
+\caption{Feature and embedding dimensions by pipeline stage.
+         $d_\text{enc}$ denotes the encoder output dimension before PCA.}
+\label{tab:supp_dims}
+\begin{tabular}{llcl}
+\toprule
+Pipeline stage & Setting(s) & Dimension & Notes \\
+\midrule
+Raw feature block   & S1, S3--4        & 39   & Demographics, biomarkers, comorbidities \\
+Qwen3-8B output     & S3, S3-Full, S4  & 4096 & Last-token pooling; 8192-token context \\
+Bio\_ClinicalBERT output & S3, S3-Full, S4 & 768 & Mean pooling; 512-token hard limit \\
+PCA embedding (concat) & S3, S4         & 64   & Fit on training split \\
+PCA embedding (sum)  & S3, S4           & 39   & Matched to raw feature width \\
+CoxPH input (S1)    & S1               & 39   & Direct raw features \\
+CoxPH input (concat) & S3, S4          & 103  & 39 raw $+$ 64 PCA \\
+Summation fusion output & S3, S4        & 39   & Element-wise sum \\
+S4 per-event repr.  & S4               & $128 + d_\text{enc}$ & Age sinusoid $\|$ ICD token; mean-pooled \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Bootstrap Procedure}
+\label{supp:bootstrap}
+
+Bootstrap confidence intervals are computed as follows:
+\begin{enumerate}
+  \item Draw 1{,}000 resamples of the test set ($n$\,=\,18{,}623) with
+        replacement, using a fixed seed (42) for reproducibility.
+  \item In each replicate, the \emph{same} index sample is used for all methods
+        (paired resampling), so difference CIs reflect within-replicate
+        covariance and are not inflated by resample-to-resample variation.
+  \item For each replicate, compute the Harrell C-index for each method and
+        the pairwise difference $\Delta$C\,=\,C(A)\,-\,C(B).
+  \item The 95\% CI is the (2.5th, 97.5th) percentile of the 1{,}000 difference
+        values.
+  \item The one-sided $p$-value is the proportion of resamples where
+        $\Delta$C\,$ \leq\,0$ (i.e.\ method A did not exceed method B).
+\end{enumerate}
+
+\noindent Table~\ref{tab:supp_permethod} reports per-method bootstrap 95\% CIs
+for the C-index.
+The narrow CI widths ($\approx$0.017 for each method) and the extremely tight
+difference CIs for S4 vs.\ S1 ($\approx$0.001 wide) both reflect the large
+test set.
+With $n$\,=\,18{,}623, the bootstrap standard error of the C-index is
+approximately 0.004, giving a 95\% CI width of $\approx$0.016--0.018 for
+individual methods; for paired differences, the within-replicate covariance
+further compresses the CI width.
+
+\begin{table}[H]
+\centering
+\caption{Per-method bootstrap 95\% C-index CIs (1000 resamples, paired,
+         seed 42). Reference configurations only.}
+\label{tab:supp_permethod}
+\begin{tabular}{lcc}
+\toprule
+Method & C-index & 95\% CI \\
+\midrule
+S1 — Baseline CoxPH       & 0.6191 & (0.610, 0.627) \\
+S2 — Delphi zero-shot     & 0.6161 & —              \\
+S3 — Qwen3-8B concat      & 0.6156 & (0.607, 0.624) \\
+S3 — BCB concat           & 0.6225 & (0.614, 0.631) \\
+S3-Full — Qwen3-8B        & 0.6195 & (0.611, 0.628) \\
+S3-Full — BCB$^\dagger$   & 0.6371 & (0.629, 0.646) \\
+S4 — Qwen3-8B concat      & 0.6233 & (0.615, 0.631) \\
+S4 — BCB concat           & 0.6232 & (0.615, 0.631) \\
+\bottomrule
+\end{tabular}
+\end{table}
+{\small $^\dagger$S3-Full·BCB is an implementation-sensitive artefact
+(512-token truncation); excluded from headline claims (see main text).}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{S3-Full·BCB Anomaly: Metric Consistency Verification}
+\label{supp:bcb_anomaly}
+
+Setting~3-Full·BCB achieves the highest raw C-index (0.6371) among all 12
+cells, yet its mean TD-AUC (0.507) is near chance and its horizon-specific
+TD-AUC values (0.510, 0.508, 0.505) are essentially flat across 9.5--19.7
+years.
+
+To rule out a computational cause, we verified:
+\begin{itemize}
+  \item \textbf{Shared evaluation loop}: all 12 methods are evaluated using
+        the identical \texttt{scikit-survival} pipeline; time grids, censoring
+        indicators, and inverse-probability-of-censoring weights (IPCW) are
+        shared across methods in the same evaluation call.
+  \item \textbf{C-index vs.\ TD-AUC ordering}: C-index measures overall rank
+        agreement (discrimination), while TD-AUC at each horizon measures
+        rank agreement within a time window.
+        A model that ranks patients correctly on average but concentrates its
+        predictive signal in a single feature (here: age, leaked through
+        truncation) can achieve high C-index while producing a flat TD-AUC
+        profile.
+\end{itemize}
+
+The hypothesised mechanism is that BCB's 512-token limit truncates the
+disease-history tail, causing the input to consist predominantly of age tokens
+and recent high-severity events rather than the full longitudinal trajectory.
+The model effectively learns a strong age signal, which consistently ranks
+patients but carries no time-specific risk information, explaining the
+C-index/TD-AUC divergence.
+We therefore exclude S3-Full·BCB from primary conclusions and recommend
+longer-context clinical encoders (e.g., Qwen3-8B with 8192-token context)
+for Setting~3-Full.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Cohort and Split Details}
+\label{supp:cohort}
+
+\paragraph{Split sizes and event rates.}
+The 70/15/15 stratified split yields: train 86{,}911, val 18{,}624,
+test 18{,}623 (event rate 26.2\,\% in each split by stratification).
+All-cause mortality after age 60 is the binary outcome; survival time is
+time from age 60 to death or last follow-up date.
+
+\paragraph{Feature extraction cutoff.}
+All features are extracted from records prior to the participant's 60th
+birthday.
+The age-60 cutoff was chosen to (a) exclude features that are themselves
+consequences of late-life illness (collider bias), and (b) align the
+prediction task with a realistic clinical decision point for preventive
+intervention.
+ICD-10 diagnoses from hospital episode statistics fields p41202, p41204,
+p41270 are used for the disease history.
+
+\end{document}
