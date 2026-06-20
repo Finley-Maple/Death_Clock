@@ -50,7 +50,7 @@ Fig.~\ref{fig:overview} shows the full design.
   \label{fig:overview}
 \end{figure}
 
-\paragraph{Input Representation (5 settings).}
+\paragraph{Input Representation (4 settings).}
 Patient data before age 60 is serialised into five distinct representations
 of increasing temporal and modality richness:
 
@@ -64,7 +64,7 @@ of increasing temporal and modality richness:
 
   \item \textbf{Sequential ordinal (Setting 2).}
         ICD-10 events before age 60 are encoded as an ordinal token stream
-        \textit{``44yr:J45 $\rightarrow$ 52yr:F32 $\rightarrow$ \ldots''}.
+        \textit{``42.0yr:J45 $\rightarrow$ 52.1yr:F32 $\rightarrow$ \ldots''}.
         Temporal ordering is captured but exact durations between events are
         implicit.
         This is the input format consumed by Delphi~\cite{delphi2024},
@@ -73,8 +73,7 @@ of increasing temporal and modality richness:
 
   \item \textbf{Isolated temporal prose (Setting 3).}
         The same ICD events are serialised as natural-language sentences:
-        \textit{``At age 44.0, patient was diagnosed with J45 vasomotor
-        rhinitis.''}
+        \textit{``At age 42.0, patient was diagnosed with J45 asthma.''}
         Demographics and biomarkers are provided as a separate numeric
         feature block and fused with the embedding at evaluation time.
         A variant, Setting~3-Full, combines all four modalities into a single
